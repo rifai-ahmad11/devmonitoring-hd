@@ -322,6 +322,27 @@ def mark_maintenance_done():
         print(f"Error marking maintenance done: {e}")
         return jsonify({'error': 'Internal server error'}), 500
 
+#Endpoint hapus mesin
+@app.route('/delete-machine', methods=['POST'])
+def delete_machine():
+    try:
+        data = request.get_json()
+        machine_id = data.get('machine_id')
+
+        if not machine_id:
+            return jsonify({'error': 'Missing machine_id'}), 400
+
+        with data_lock:
+            if machine_id not in machines:
+                return jsonify({'error': 'Machine not found'}), 404
+
+            del machines[machine_id]
+
+        return jsonify({'success': True, 'message': f'Machine {machine_id} deleted'})
+
+    except Exception as e:
+        return jsonify({'error': 'Internal server error'}), 500
+
 # Helper functions
 def create_new_machine(machine_id, current_time):
     return {
@@ -417,31 +438,15 @@ def check_machine_timeout():
                 
                 print(f"Machine {machine_id} marked as STOPPED due to heartbeat timeout")
 
-def cleanup_old_machines():
-    while True:
-        time.sleep(CLEANUP_INTERVAL)
-        with data_lock:
-            current_time = datetime.now()
-            machines_to_remove = []
-            
-            for machine_id, data in machines.items():
-                if data['last_update'] and (current_time - data['last_update']) > timedelta(hours=24):
-                    machines_to_remove.append(machine_id)
-            
-            for machine_id in machines_to_remove:
-                del machines[machine_id]
-                print(f"Removed old machine: {machine_id}")
 
 # Start background threads
 timeout_thread = threading.Thread(target=check_machine_timeout, daemon=True)
 timeout_thread.start()
 
-cleanup_thread = threading.Thread(target=cleanup_old_machines, daemon=True)
-cleanup_thread.start()
-
 if __name__ == '__main__':
     print("Starting Machine Monitoring Server...")
 
     socketio.run(app, host='0.0.0.0', port=5000, allow_unsafe_werkzeug=True)
+
 
 
