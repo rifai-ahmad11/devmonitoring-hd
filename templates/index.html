@@ -697,10 +697,10 @@
             card.id = `machine-${machineId}`;
             
             const statusClass = data.status === 'running' ? 'running' : 'stopped';
-            const statusText = data.status === 'running' ? '▶ RUNNING' : '⏹ STOPPED';
+            const statusText = data.status === 'running' ? '▶ HD ON' : '⏹ HD OFF';
             
             const pumpStatusClass = data.pump_status === 'running' ? 'running' : 'stopped';
-            const pumpStatusText = data.pump_status === 'running' ? '▶ PUMP ON' : '⏹ PUMP OFF';
+            const pumpStatusText = data.pump_status === 'running' ? 'TREATMENT' : 'IDLE';
             
             // Gunakan data dari server untuk maintenance
             const maintenanceItems = data.maintenance_required || [];
@@ -726,10 +726,6 @@
                 </div>
                 <div class="machine-info">
                     <div class="info-row">
-                        <span class="info-label">Treatment Selesai</span>
-                        <span class="info-value">${data.completed_treatments || 0}</span>
-                    </div>
-                    <div class="info-row">
                         <span class="info-label">Total Error</span>
                         <span class="info-value ${errorCount > 0 ? 'error-value' : ''}">${errorCount}</span>
                     </div>
@@ -740,20 +736,24 @@
                     
                     <!-- Sesi Treatment -->
                     <div class="info-row" style="margin-top: 10px; padding-top: 10px; border-top: 1px dashed #ddd;">
-                        <span class="info-label">🏥 Treatment Time</span>
+                        <span class="info-label">🏥 Active Time</span>
                         <div style="display: flex; flex-direction: column; align-items: flex-end;">
                             <span class="info-value time-value">${formatTime(data.current_session_duration || 0)}</span>
                             <small style="font-size: 0.8em; color: #666;">Durasi Sesi</small>
                         </div>
                     </div>
                     <div class="info-row">
-                        <span class="info-label">Total Treatment Time</span>
+                        <span class="info-label">Total Active Time</span>
                         <span class="info-value time-value">${formatTime(data.total_active_time || 0)}</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">Jumlah Sesi Aktif Selesai</span>
+                        <span class="info-value">${data.completed_treatments || 0}</span>
                     </div>
                     
                     <!-- Sesi Dialysis -->
                     <div class="info-row" style="margin-top: 10px; padding-top: 10px; border-top: 1px dashed #ddd;">
-                        <span class="info-label">💉 Dialysis Time</span>
+                        <span class="info-label">💉 Treatment Time</span>
                         <div style="display: flex; flex-direction: column; align-items: flex-end;">
                             <span class="info-value time-value" style="background: linear-gradient(135deg, #2196f3 0%, #1976d2 100%);">
                                 ${formatTime(data.current_dialysis_duration || 0)}
@@ -762,13 +762,13 @@
                         </div>
                     </div>
                     <div class="info-row">
-                        <span class="info-label">Total Dialysis Time</span>
+                        <span class="info-label">Total Treatment Time</span>
                         <span class="info-value time-value" style="background: linear-gradient(135deg, #2196f3 0%, #1976d2 100%);">
                             ${formatTime(data.total_dialysis_time || 0)}
                         </span>
                     </div>
                     <div class="info-row">
-                        <span class="info-label">Dialysis Selesai</span>
+                        <span class="info-label">Jumlah Treatment Selesai</span>
                         <span class="info-value">${data.completed_dialysis || 0}</span>
                     </div>
                     
