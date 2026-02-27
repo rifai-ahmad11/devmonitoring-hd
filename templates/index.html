@@ -795,10 +795,10 @@
             if (!card) return;
 
             const statusClass = data.status === 'running' ? 'running' : 'stopped';
-            const statusText = data.status === 'running' ? '▶ RUNNING' : '⏹ STOPPED';
+            const statusText = data.status === 'running' ? '▶ HD ON' : '⏹ HD OFF';
             
             const pumpStatusClass = data.pump_status === 'running' ? 'running' : 'stopped';
-            const pumpStatusText = data.pump_status === 'running' ? '▶ PUMP ON' : '⏹ PUMP OFF';
+            const pumpStatusText = data.pump_status === 'running' ? '▶ TREATMENT' : '⏹ IDLE';
             
             // Gunakan data dari server untuk maintenance
             const maintenanceItems = data.maintenance_required || [];
