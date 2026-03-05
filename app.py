@@ -10,11 +10,11 @@ socketio = SocketIO(app)
 
 # Konfigurasi threshold maintenance
 MAINTENANCE_THRESHOLDS = {
-    'filter_inlet': 5, #completed dialysis
+    'filter_inlet': 200, #completed dialysis
 }
 
 # Konfigurasi threshold dialysis
-MIN_DIALYSIS_DURATION = 60  # 60 detik (untuk testing, bisa disesuaikan) harus lebih singkat dibanding active time
+MIN_DIALYSIS_DURATION = 3600  # 1 jam harus lebih singkat dibanding active time
 
 def get_maintenance_name(item):
     names = {
@@ -83,9 +83,9 @@ machines = {
 data_lock = threading.Lock()
 
 # Timeout configuration
-HEARTBEAT_TIMEOUT = 90   #90 detik, 1,5 menit data tidak masuk maka mesin mati
-CLEANUP_INTERVAL = 300
-MIN_TREATMENT_DURATION = 60 #60 detik 1 menit
+HEARTBEAT_TIMEOUT = 390   #6,5 menit baru mesin mati
+CLEANUP_INTERVAL = 9999999
+MIN_TREATMENT_DURATION = 5400 #1,5 jam
 
 @app.route('/')
 def index():
@@ -445,6 +445,7 @@ if __name__ == '__main__':
     print("Starting Machine Monitoring Server...")
 
     socketio.run(app, host='0.0.0.0', port=5000, allow_unsafe_werkzeug=True)
+
 
 
 
