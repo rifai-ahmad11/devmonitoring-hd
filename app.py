@@ -37,7 +37,7 @@ def calculate_required_maintenance(machine_id, machines_dict):
     maintenance_required = []
     
     for item, threshold in MAINTENANCE_THRESHOLDS.items():
-        last_maintenance_treatment = 0
+        last_maintenance_dialysis = 0
         for maintenance in reversed(machine_data['maintenance_history']):
             if maintenance['item'] == item:
                 # gunakan dialysis_count jika ada, fallback ke treatment_count (kompatibilitas)
@@ -445,6 +445,7 @@ if __name__ == '__main__':
     print("Starting Machine Monitoring Server...")
 
     socketio.run(app, host='0.0.0.0', port=5000, allow_unsafe_werkzeug=True)
+
 
 
 
