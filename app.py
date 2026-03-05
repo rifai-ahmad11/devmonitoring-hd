@@ -10,24 +10,21 @@ socketio = SocketIO(app)
 
 # Konfigurasi threshold maintenance
 MAINTENANCE_THRESHOLDS = {
-    'filter_inlet': 5,
-    'seal_ring': 10,
+    'filter_inlet': 5, #completed dialysis
 }
 
 # Konfigurasi threshold dialysis
-MIN_DIALYSIS_DURATION = 60  # detik (untuk testing, bisa disesuaikan)
+MIN_DIALYSIS_DURATION = 60  # 60 detik (untuk testing, bisa disesuaikan) harus lebih singkat dibanding active time
 
 def get_maintenance_name(item):
     names = {
         'filter_inlet': 'Filter Inlet',
-        'seal_ring': 'Seal Ring'
     }
     return names.get(item, item)
 
 def get_maintenance_description(item):
     descriptions = {
-        'filter_inlet': 'Ganti filter inlet untuk memastikan kualitas air tetap optimal.',
-        'seal_ring': 'Periksa dan ganti seal ring untuk mencegah kebocoran.'
+        'filter_inlet': 'Ganti filter endotoksin untuk memastikan kualitas air tetap optimal.',
     }
     return descriptions.get(item, 'Perlu perawatan rutin.')
 
@@ -36,24 +33,25 @@ def calculate_required_maintenance(machine_id, machines_dict):
         return []
     
     machine_data = machines_dict[machine_id]
-    completed_treatments = machine_data['completed_treatments']
+    completed_dialysis = machine_data['completed_dialysis']          # pakai dialysis
     maintenance_required = []
     
     for item, threshold in MAINTENANCE_THRESHOLDS.items():
         last_maintenance_treatment = 0
         for maintenance in reversed(machine_data['maintenance_history']):
             if maintenance['item'] == item:
-                last_maintenance_treatment = maintenance['treatment_count']
+                # gunakan dialysis_count jika ada, fallback ke treatment_count (kompatibilitas)
+                last_maintenance_dialysis = maintenance.get('dialysis_count', maintenance.get('treatment_count', 0))
                 break
         
-        if completed_treatments - last_maintenance_treatment >= threshold:
+        if completed_dialysis - last_maintenance_dialysis >= threshold:
             maintenance_required.append({
                 'item': item,
                 'name': get_maintenance_name(item),
                 'description': get_maintenance_description(item),
                 'threshold': threshold,
-                'treatments_since_last': completed_treatments - last_maintenance_treatment,
-                'last_maintenance_treatment': last_maintenance_treatment
+                'treatments_since_last': completed_dialysis - last_maintenance_dialysis,   # tetap kirim dengan nama lama (frontend akan disesuaikan)
+                'last_maintenance_treatment': last_maintenance_dialysis
             })
     
     return maintenance_required
@@ -85,9 +83,9 @@ machines = {
 data_lock = threading.Lock()
 
 # Timeout configuration
-HEARTBEAT_TIMEOUT = 90
+HEARTBEAT_TIMEOUT = 90   #90 detik, 1,5 menit data tidak masuk maka mesin mati
 CLEANUP_INTERVAL = 300
-MIN_TREATMENT_DURATION = 60
+MIN_TREATMENT_DURATION = 60 #60 detik 1 menit
 
 @app.route('/')
 def index():
@@ -304,7 +302,7 @@ def mark_maintenance_done():
             
             maintenance_record = {
                 'item': maintenance_item,
-                'treatment_count': machine_data['completed_treatments'],
+                'dialysis_count': machine_data['completed_dialysis'],   # ganti dari treatment_count
                 'timestamp': datetime.now().isoformat(),
                 'description': f'Maintenance {get_maintenance_name(maintenance_item)} dilakukan'
             }
@@ -447,6 +445,7 @@ if __name__ == '__main__':
     print("Starting Machine Monitoring Server...")
 
     socketio.run(app, host='0.0.0.0', port=5000, allow_unsafe_werkzeug=True)
+
 
 
 
