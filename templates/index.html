@@ -109,10 +109,29 @@
         }
 
         .machine-id {
+            display: flex;
+            flex-direction: column;
+            line-height: 1.2;
+            flex: 1;
+        }
+        
+        .machine-id-main {
             font-size: 1.3em;
             font-weight: bold;
             color: #333;
-            flex: 1;
+        }
+        
+        .machine-id-rs {
+            font-size: 0.85em;
+            color: #666;
+            margin-top: 2px;
+        }
+        
+        .machine-id-sn {
+            font-size: 1em;
+            color: #2196f3;
+            font-family: monospace;
+            margin-top: 2px;
         }
 
         /* Tambahkan di bagian CSS */
@@ -614,9 +633,20 @@
             });
         }
 
+        //Parse id mesin
+        function parseMachineId(fullId) {
+            const parts = fullId.split('-');
+            return {
+                id: parts[0] || fullId,        // bagian pertama: HD_001
+                rs: parts[1] || '',             // bagian kedua: RS Harapan Kita_1
+                sn: parts[2] || ''               // bagian ketiga: XT054101
+            };
+        }
+        
         // Fungsi untuk menampilkan modal maintenance
         function showMaintenanceModal(machineId, maintenanceItems) {
-            modalMachineId.textContent = machineId;
+            const parsed = parseMachineId(machineId);
+            modalMachineId.textContent = parsed.sn;
             maintenanceList.innerHTML = '';
             
             maintenanceItems.forEach(item => {
@@ -713,10 +743,16 @@
             
             const maintenanceBadgeHTML = maintenanceCount > 0 ? 
                 `<span class="maintenance-badge" data-machine-id="${machineId}">⚠️ ${maintenanceCount} Maintenance</span>` : '';
-            
+          
+            const parsed = parseMachineId(machineId);
+
             card.innerHTML = `
                 <div class="machine-header">
-                    <div class="machine-id">${machineId}</div>
+                    <div class="machine-id">
+                        <div class="machine-id-main">${parsed.id}</div>
+                        <div class="machine-id-rs">${parsed.rs}</div>
+                        <div class="machine-id-sn">${parsed.sn}</div>
+                    </div>
                     <div class="header-badges">
                         ${errorBadge}
                         ${maintenanceBadgeHTML}
@@ -812,9 +848,15 @@
             const maintenanceBadgeHTML = maintenanceCount > 0 ? 
                 `<span class="maintenance-badge" data-machine-id="${machineId}">⚠️ ${maintenanceCount} Maintenance</span>` : '';
             
+            const parsed = parseMachineId(machineId);
+            
             card.innerHTML = `
                 <div class="machine-header">
-                    <div class="machine-id">${machineId}</div>
+                    <div class="machine-id">
+                        <div class="machine-id-main">${parsed.id}</div>
+                        <div class="machine-id-rs">${parsed.rs}</div>
+                        <div class="machine-id-sn">${parsed.sn}</div>
+                    </div>
                     <div class="header-badges">
                         ${errorBadge}
                         ${maintenanceBadgeHTML}
