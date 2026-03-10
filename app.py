@@ -436,15 +436,36 @@ def check_machine_timeout():
                 
                 print(f"Machine {machine_id} marked as STOPPED due to heartbeat timeout")
 
+#agar ada auto update
+def broadcast_machine_updates():
+    while True:
+        time.sleep(10)  # setiap 10 detik
+        with data_lock:
+            for machine_id, machine_data in machines.items():
+                # Update current durations
+                current_time = datetime.now()
+                if machine_data['status'] == 'running' and machine_data['current_session_start']:
+                    machine_data['current_session_duration'] = (current_time - machine_data['current_session_start']).total_seconds()
+                if machine_data['pump_status'] == 'running' and machine_data['dialysis_session_start']:
+                    machine_data['current_dialysis_duration'] = (current_time - machine_data['dialysis_session_start']).total_seconds()
+                # Hitung ulang maintenance (sudah dilakukan di get_machine_data_for_emit? Lebih baik panggil calculate)
+                machine_data['maintenance_required'] = calculate_required_maintenance(machine_id, machines)
+                # Emit ke semua client
+                socketio.emit('machine_update', get_machine_data_for_emit(machine_data, machine_id))
 
 # Start background threads
 timeout_thread = threading.Thread(target=check_machine_timeout, daemon=True)
 timeout_thread.start()
 
+#thread broadcast
+broadcast_thread = threading.Thread(target=broadcast_machine_updates, daemon=True)
+broadcast_thread.start()
+
 if __name__ == '__main__':
     print("Starting Machine Monitoring Server...")
 
     socketio.run(app, host='0.0.0.0', port=5000, allow_unsafe_werkzeug=True)
+
 
 
 
