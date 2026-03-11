@@ -737,7 +737,8 @@
             
             // Buat badge-badge
             const errorCount = data.error_count || 0;
-            
+            const errorBadge = errorCount > 0 ? 
+                `<span class="error-badge">${errorCount} Error</span>` : '';
             
             const maintenanceBadgeHTML = maintenanceCount > 0 ? 
                 `<span class="maintenance-badge" data-machine-id="${machineId}">⚠️ ${maintenanceCount} Maintenance</span>` : '';
