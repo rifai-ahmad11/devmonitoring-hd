@@ -545,8 +545,8 @@
 <body>
     <div class="dashboard-container">
         <div class="header">
-            <h1>HD Machine Monitoring Dashboard</h1>
-            <p>Sistem monitoring realtime mesin hemodialisis</p>
+            <h1>🏭 HD Machine Monitoring Dashboard</h1>
+            <p>Real-time monitoring sistem mesin hemodialisis</p>
         </div>
 
         <div class="machines-grid" id="machinesGrid">
@@ -661,7 +661,7 @@
                     <div class="maintenance-item-desc">${item.description}</div>
                     <div class="maintenance-item-details">
                         Threshold: Setiap ${item.threshold} treatment<br>
-                        Treatment sejak terakhir maintenance: ${item.treatments_since_last}
+                        Treatment sejak terakhir: ${item.treatments_since_last}
                     </div>
                 `;
                 maintenanceList.appendChild(li);
@@ -735,7 +735,11 @@
             const maintenanceItems = data.maintenance_required || [];
             const maintenanceCount = data.maintenance_count || 0;
             
-            // Buat badge-badge          
+            // Buat badge-badge
+            const errorCount = data.error_count || 0;
+            const errorBadge = errorCount > 0 ? 
+                `<span class="error-badge">${errorCount} Error</span>` : '';
+            
             const maintenanceBadgeHTML = maintenanceCount > 0 ? 
                 `<span class="maintenance-badge" data-machine-id="${machineId}">⚠️ ${maintenanceCount} Maintenance</span>` : '';
           
@@ -757,24 +761,24 @@
                 </div>
                 <div class="machine-info">
                     <div class="info-row">
-                        <span class="info-label">Total Kegagalan Koneksi</span>
+                        <span class="info-label">Total Error</span>
                         <span class="info-value ${errorCount > 0 ? 'error-value' : ''}">${errorCount}</span>
                     </div>
                     <div class="info-row">
-                        <span class="info-label">Jumlah Maintenance Diperlukan</span>
+                        <span class="info-label">Maintenance Diperlukan</span>
                         <span class="info-value ${maintenanceCount > 0 ? 'error-value' : ''}">${maintenanceCount}</span>
                     </div>
                     
                     <!-- Sesi Treatment -->
                     <div class="info-row" style="margin-top: 10px; padding-top: 10px; border-top: 1px dashed #ddd;">
-                        <span class="info-label">Waktu Aktif</span>
+                        <span class="info-label">🏥 Active Time</span>
                         <div style="display: flex; flex-direction: column; align-items: flex-end;">
                             <span class="info-value time-value">${formatTime(data.current_session_duration || 0)}</span>
                             <small style="font-size: 0.8em; color: #666;">Durasi Sesi</small>
                         </div>
                     </div>
                     <div class="info-row">
-                        <span class="info-label">Total Waktu Aktif</span>
+                        <span class="info-label">Total Active Time</span>
                         <span class="info-value time-value">${formatTime(data.total_active_time || 0)}</span>
                     </div>
                     <div class="info-row">
@@ -784,7 +788,7 @@
                     
                     <!-- Sesi Dialysis -->
                     <div class="info-row" style="margin-top: 10px; padding-top: 10px; border-top: 1px dashed #ddd;">
-                        <span class="info-label">Waktu Treatment</span>
+                        <span class="info-label">💉 Treatment Time</span>
                         <div style="display: flex; flex-direction: column; align-items: flex-end;">
                             <span class="info-value time-value" style="background: linear-gradient(135deg, #2196f3 0%, #1976d2 100%);">
                                 ${formatTime(data.current_dialysis_duration || 0)}
@@ -793,7 +797,7 @@
                         </div>
                     </div>
                     <div class="info-row">
-                        <span class="info-label">Total Waktu Treatment</span>
+                        <span class="info-label">Total Treatment Time</span>
                         <span class="info-value time-value" style="background: linear-gradient(135deg, #2196f3 0%, #1976d2 100%);">
                             ${formatTime(data.total_dialysis_time || 0)}
                         </span>
@@ -835,7 +839,11 @@
             const maintenanceItems = data.maintenance_required || [];
             const maintenanceCount = data.maintenance_count || 0;
             
-            // Buat badge-badge  
+            // Buat badge-badge
+            const errorCount = data.error_count || 0;
+            const errorBadge = errorCount > 0 ? 
+                `<span class="error-badge">${errorCount} Error</span>` : '';
+            
             const maintenanceBadgeHTML = maintenanceCount > 0 ? 
                 `<span class="maintenance-badge" data-machine-id="${machineId}">⚠️ ${maintenanceCount} Maintenance</span>` : '';
             
@@ -857,24 +865,24 @@
                 </div>
                 <div class="machine-info">
                     <div class="info-row">
-                        <span class="info-label">Total Kegagalan Koneksi</span>
+                        <span class="info-label">Total Error</span>
                         <span class="info-value ${errorCount > 0 ? 'error-value' : ''}">${errorCount}</span>
                     </div>
                     <div class="info-row">
-                        <span class="info-label">Jumlah Maintenance Diperlukan</span>
+                        <span class="info-label">Maintenance Diperlukan</span>
                         <span class="info-value ${maintenanceCount > 0 ? 'error-value' : ''}">${maintenanceCount}</span>
                     </div>
                     
                     <!-- Sesi Treatment -->
                     <div class="info-row" style="margin-top: 10px; padding-top: 10px; border-top: 1px dashed #ddd;">
-                        <span class="info-label">Waktu Aktif</span>
+                        <span class="info-label">🏥 Active Time</span>
                         <div style="display: flex; flex-direction: column; align-items: flex-end;">
                             <span class="info-value time-value">${formatTime(data.current_session_duration || 0)}</span>
                             <small style="font-size: 0.8em; color: #666;">Durasi Sesi</small>
                         </div>
                     </div>
                     <div class="info-row">
-                        <span class="info-label">Total Waktu Aktif</span>
+                        <span class="info-label">Total Active Time</span>
                         <span class="info-value time-value">${formatTime(data.total_active_time || 0)}</span>
                     </div>
                     <div class="info-row">
@@ -884,7 +892,7 @@
                     
                     <!-- Sesi Dialysis -->
                     <div class="info-row" style="margin-top: 10px; padding-top: 10px; border-top: 1px dashed #ddd;">
-                        <span class="info-label">Waktu Treatment</span>
+                        <span class="info-label">💉 Treatment Time</span>
                         <div style="display: flex; flex-direction: column; align-items: flex-end;">
                             <span class="info-value time-value" style="background: linear-gradient(135deg, #2196f3 0%, #1976d2 100%);">
                                 ${formatTime(data.current_dialysis_duration || 0)}
@@ -893,7 +901,7 @@
                         </div>
                     </div>
                     <div class="info-row">
-                        <span class="info-label">Total Waktu Treatment</span>
+                        <span class="info-label">Total Treatment Time</span>
                         <span class="info-value time-value" style="background: linear-gradient(135deg, #2196f3 0%, #1976d2 100%);">
                             ${formatTime(data.total_dialysis_time || 0)}
                         </span>
