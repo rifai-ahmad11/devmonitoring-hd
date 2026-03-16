@@ -1,12 +1,15 @@
-from flask import Flask, render_template, request, jsonify
+from flask import Flask, render_template, request, jsonify, session, redirect, url_for
 from flask_socketio import SocketIO, emit
 from datetime import datetime, timedelta
+from functools import wraps
 import threading
 import time
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'your_secret_key_here'
 socketio = SocketIO(app)
+# Password statis (sebaiknya gunakan environment variable)
+LOGIN_PASSWORD = "OJI2026"   # ganti dengan password yang Anda inginkan
 
 # Konfigurasi threshold maintenance
 MAINTENANCE_THRESHOLDS = {
@@ -57,27 +60,7 @@ def calculate_required_maintenance(machine_id, machines_dict):
     return maintenance_required
 
 # In-memory storage dengan tambahan field untuk dialysis
-machines = {
-    'HD_999': {
-        'status': 'stopped',
-        'last_update': None,
-        'start_time': None,
-        'total_active_time': 0,
-        'current_session_start': None,
-        'last_heartbeat': None,
-        'completed_treatments': 0,
-        'current_session_duration': 0,
-        'error_history': [],
-        'maintenance_history': [],
-        'maintenance_required': [],
-        # FIELD BARU UNTUK DIALYSIS
-        'pump_status': 'stopped',
-        'dialysis_session_start': None,
-        'total_dialysis_time': 0,
-        'completed_dialysis': 0,
-        'current_dialysis_duration': 0
-    }
-}
+machines = {}
 
 # Lock untuk thread safety
 data_lock = threading.Lock()
@@ -87,10 +70,36 @@ HEARTBEAT_TIMEOUT = 390   #6,5 menit baru mesin mati
 CLEANUP_INTERVAL = 9999999
 MIN_TREATMENT_DURATION = 5400 #1,5 jam
 
+# Decorator untuk memeriksa login
+def login_required(f):
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if not session.get('logged_in'):
+            return redirect(url_for('login'))
+        return f(*args, **kwargs)
+    return decorated_function
+    
 @app.route('/')
+@login_required
 def index():
     return render_template('index.html')
 
+@app.route('/login', methods=['GET', 'POST'])
+def login():
+    if request.method == 'POST':
+        password = request.form.get('password')
+        if password == LOGIN_PASSWORD:
+            session['logged_in'] = True
+            return redirect(url_for('index'))
+        else:
+            return render_template('login.html', error="Password salah")
+    return render_template('login.html')
+    
+@app.route('/logout')
+def logout():
+    session.pop('logged_in', None)
+    return redirect(url_for('login'))
+    
 @app.route('/api/machines')
 def get_machines():
     with data_lock:
@@ -437,17 +446,35 @@ def check_machine_timeout():
                 print(f"Machine {machine_id} marked as STOPPED due to heartbeat timeout")
 
 
+#agar ada auto update
+def broadcast_machine_updates():
+    while True:
+        time.sleep(10)  # setiap 10 detik
+        with data_lock:
+            for machine_id, machine_data in machines.items():
+                # Update current durations
+                current_time = datetime.now()
+                if machine_data['status'] == 'running' and machine_data['current_session_start']:
+                    machine_data['current_session_duration'] = (current_time - machine_data['current_session_start']).total_seconds()
+                if machine_data['pump_status'] == 'running' and machine_data['dialysis_session_start']:
+                    machine_data['current_dialysis_duration'] = (current_time - machine_data['dialysis_session_start']).total_seconds()
+                # Hitung ulang maintenance (sudah dilakukan di get_machine_data_for_emit? Lebih baik panggil calculate)
+                machine_data['maintenance_required'] = calculate_required_maintenance(machine_id, machines)
+                # Emit ke semua client
+                socketio.emit('machine_update', get_machine_data_for_emit(machine_data, machine_id))
+                
 # Start background threads
 timeout_thread = threading.Thread(target=check_machine_timeout, daemon=True)
 timeout_thread.start()
+
+#thread broadcast
+broadcast_thread = threading.Thread(target=broadcast_machine_updates, daemon=True)
+broadcast_thread.start()
 
 if __name__ == '__main__':
     print("Starting Machine Monitoring Server...")
 
     socketio.run(app, host='0.0.0.0', port=5000, allow_unsafe_werkzeug=True)
-
-
-
 
 
 
