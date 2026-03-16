@@ -9,7 +9,7 @@ app = Flask(__name__)
 app.config['SECRET_KEY'] = 'your_secret_key_here'
 socketio = SocketIO(app)
 # Password statis (sebaiknya gunakan environment variable)
-LOGIN_PASSWORD = "OJI2026"   # ganti dengan password yang Anda inginkan
+LOGIN_PASSWORD = "OJI2026!"   # ganti dengan password yang Anda inginkan
 
 # Konfigurasi threshold maintenance
 MAINTENANCE_THRESHOLDS = {
