@@ -4,6 +4,11 @@ from datetime import datetime, timedelta
 from functools import wraps
 import threading
 import time
+import os
+from flask import Flask, ... 
+from sqlalchemy import create_engine, Column, ...
+from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy.orm import sessionmaker, scoped_session
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'your_secret_key_here'
@@ -11,13 +16,60 @@ socketio = SocketIO(app)
 # Password statis (sebaiknya gunakan environment variable)
 LOGIN_PASSWORD = "OJI2026!"   # ganti dengan password yang Anda inginkan
 
+# Ambil DATABASE_URL dari environment variable
+DATABASE_URL = os.environ.get('DATABASE_URL', 'postgresql://postgres:fAfrLTxIvblQAiXDRvllRuJqiGgzYBvx@turntable.proxy.rlwy.net:29037/railway')
+
+# Buat engine dan session
+engine = create_engine(DATABASE_URL, pool_size=10, max_overflow=20)
+db_session = scoped_session(sessionmaker(bind=engine))
+Base = declarative_base()
+Base.query = db_session.query_property()
+
+class Machine(Base):
+    __tablename__ = 'machines'
+    machine_id = Column(String(50), primary_key=True)
+    status = Column(String(20), default='stopped')
+    last_update = Column(DateTime, nullable=True)
+    start_time = Column(DateTime, nullable=True)
+    total_active_time = Column(Float, default=0.0)
+    current_session_start = Column(DateTime, nullable=True)
+    last_heartbeat = Column(DateTime, nullable=True)
+    completed_treatments = Column(Integer, default=0)
+    pump_status = Column(String(20), default='stopped')
+    dialysis_session_start = Column(DateTime, nullable=True)
+    total_dialysis_time = Column(Float, default=0.0)
+    completed_dialysis = Column(Integer, default=0)
+
+class Error(Base):
+    __tablename__ = 'errors'
+    id = Column(Integer, primary_key=True)
+    machine_id = Column(String(50), nullable=False)
+    error_code = Column(String(20))
+    type = Column(String(50))
+    timestamp = Column(DateTime)
+    server_received_at = Column(DateTime, default=datetime.now)
+    created_at = Column(DateTime, server_default=func.now())
+
+class Maintenance(Base):
+    __tablename__ = 'maintenance'
+    id = Column(Integer, primary_key=True)
+    machine_id = Column(String(50), nullable=False)
+    item = Column(String(50))
+    dialysis_count = Column(Integer)
+    timestamp = Column(DateTime, default=datetime.now)
+    description = Column(Text)
+
+
+# Di bagian bawah setelah definisi model, jalankan:
+Base.metadata.create_all(bind=engine)
+
 # Konfigurasi threshold maintenance
 MAINTENANCE_THRESHOLDS = {
-    'filter_inlet': 200, #completed dialysis
+    'filter_inlet': 5, #completed dialysis
 }
 
 # Konfigurasi threshold dialysis
-MIN_DIALYSIS_DURATION = 3600  # 1 jam harus lebih singkat dibanding active time
+MIN_DIALYSIS_DURATION = 60  # 1 jam harus lebih singkat dibanding active time
 
 def get_maintenance_name(item):
     names = {
@@ -31,23 +83,18 @@ def get_maintenance_description(item):
     }
     return descriptions.get(item, 'Perlu perawatan rutin.')
 
-def calculate_required_maintenance(machine_id, machines_dict):
-    if machine_id not in machines_dict:
+def calculate_required_maintenance(machine_id):
+    machine = Machine.query.get(machine_id)
+    if not machine:
         return []
-    
-    machine_data = machines_dict[machine_id]
-    completed_dialysis = machine_data['completed_dialysis']          # pakai dialysis
+    completed_dialysis = machine.completed_dialysis
     maintenance_required = []
-    
     for item, threshold in MAINTENANCE_THRESHOLDS.items():
-        last_maintenance_dialysis = 0
-        for maintenance in reversed(machine_data['maintenance_history']):
-            if maintenance['item'] == item:
-                # gunakan dialysis_count jika ada, fallback ke treatment_count (kompatibilitas)
-                last_maintenance_dialysis = maintenance.get('dialysis_count', maintenance.get('treatment_count', 0))
-                break
-        
-        if completed_dialysis - last_maintenance_dialysis >= threshold:
+        last_maintenance = Maintenance.query.filter_by(
+            machine_id=machine_id, item=item
+        ).order_by(Maintenance.timestamp.desc()).first()
+        last_dialysis = last_maintenance.dialysis_count if last_maintenance else 0
+        if completed_dialysis - last_dialysis >= threshold:
             maintenance_required.append({
                 'item': item,
                 'name': get_maintenance_name(item),
@@ -56,8 +103,8 @@ def calculate_required_maintenance(machine_id, machines_dict):
                 'treatments_since_last': completed_dialysis - last_maintenance_dialysis,   # tetap kirim dengan nama lama (frontend akan disesuaikan)
                 'last_maintenance_treatment': last_maintenance_dialysis
             })
-    
     return maintenance_required
+
 
 # In-memory storage dengan tambahan field untuk dialysis
 machines = {}
@@ -66,9 +113,9 @@ machines = {}
 data_lock = threading.Lock()
 
 # Timeout configuration
-HEARTBEAT_TIMEOUT = 390   #6,5 menit baru mesin mati
+HEARTBEAT_TIMEOUT = 90   #6,5 menit baru mesin mati
 CLEANUP_INTERVAL = 9999999
-MIN_TREATMENT_DURATION = 5400 #1,5 jam
+MIN_TREATMENT_DURATION = 60 #1,5 jam
 
 # Decorator untuk memeriksa login
 def login_required(f):
@@ -168,68 +215,61 @@ def log_error():
         print(f"Error logging error: {e}")
         return jsonify({'error': 'Internal server error'}), 500
 
-# Endpoint update status machine (untuk heartbeat)
 @app.route('/update', methods=['POST'])
 def update_machine_status():
     try:
         data = request.get_json()
         machine_id = data.get('machine_id')
         status = data.get('status')
-        
         if not machine_id or not status:
             return jsonify({'error': 'Missing machine_id or status'}), 400
-        
-        with data_lock:
-            current_time = datetime.now()
-            
-            if machine_id not in machines:
-                machines[machine_id] = create_new_machine(machine_id, current_time)
-            
-            machine_data = machines[machine_id]
-            old_status = machine_data['status']
-            
-            machine_data['last_heartbeat'] = current_time
-            machine_data['last_update'] = current_time
-            
-            if status == 'running':
-                if old_status != 'running':
-                    machine_data['status'] = 'running'
-                    machine_data['current_session_start'] = current_time
-                    machine_data['current_session_duration'] = 0
-                    if not machine_data['start_time']:
-                        machine_data['start_time'] = current_time
-                    print(f"Machine {machine_id} STARTED new session")
-                else:
-                    if machine_data['current_session_start']:
-                        machine_data['current_session_duration'] = (current_time - machine_data['current_session_start']).total_seconds()
-            
-            elif status == 'stopped' and old_status == 'running':
-                if machine_data['current_session_start']:
-                    session_duration = (current_time - machine_data['current_session_start']).total_seconds()
-                    machine_data['total_active_time'] += session_duration
-                    
-                    if session_duration >= MIN_TREATMENT_DURATION:
-                        machine_data['completed_treatments'] += 1
-                        print(f"Machine {machine_id} completed treatment #{machine_data['completed_treatments']} (duration: {session_duration:.0f}s)")
-                    
-                    machine_data['current_session_start'] = None
-                    machine_data['current_session_duration'] = 0
-                
-                machine_data['status'] = 'stopped'
-                print(f"Machine {machine_id} STOPPED")
-            
-            # Jika mesin mati, hentikan dialysis juga
-            if status == 'stopped' and machine_data['pump_status'] == 'running':
-                stop_dialysis_session(machine_data, current_time)
-            
-            machine_data['maintenance_required'] = calculate_required_maintenance(machine_id, machines)
-            
-            socketio.emit('machine_update', get_machine_data_for_emit(machine_data, machine_id))
-            
-            return jsonify({'success': True, 'message': 'Status updated'})
-            
+
+        current_time = datetime.now()
+
+        # Ambil atau buat machine baru
+        machine = Machine.query.get(machine_id)
+        if not machine:
+            machine = Machine(machine_id=machine_id)
+            db_session.add(machine)
+
+        old_status = machine.status
+        machine.last_heartbeat = current_time
+        machine.last_update = current_time
+
+        if status == 'running':
+            if old_status != 'running':
+                machine.status = 'running'
+                machine.current_session_start = current_time
+                if not machine.start_time:
+                    machine.start_time = current_time
+                print(f"Machine {machine_id} STARTED new session")
+            else:
+                if machine.current_session_start:
+                    # hitung duration sementara (tidak disimpan)
+                    pass  # duration dihitung di frontend
+        elif status == 'stopped' and old_status == 'running':
+            if machine.current_session_start:
+                session_duration = (current_time - machine.current_session_start).total_seconds()
+                machine.total_active_time += session_duration
+                if session_duration >= MIN_TREATMENT_DURATION:
+                    machine.completed_treatments += 1
+                    print(f"Machine {machine_id} completed treatment #{machine.completed_treatments}")
+                machine.current_session_start = None
+            machine.status = 'stopped'
+            # Jika pompa masih running, stop juga
+            if machine.pump_status == 'running':
+                # logika stop dialysis (akan dipisah)
+                stop_dialysis_session(machine, current_time)
+
+        db_session.commit()
+
+        # Emit update via socket (data diambil dari machine object)
+        socketio.emit('machine_update', get_machine_data_for_emit(machine))
+
+        return jsonify({'success': True})
     except Exception as e:
-        print(f"Error updating machine status: {e}")
+        db_session.rollback()
+        print(f"Error: {e}")
         return jsonify({'error': 'Internal server error'}), 500
 
 # Endpoint baru untuk status pompa
