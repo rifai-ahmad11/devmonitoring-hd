@@ -6,7 +6,7 @@ from functools import wraps
 import threading
 import time
 from sqlalchemy import create_engine, Column, String, Float, Integer, DateTime, Text, func
-from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy.orm import declarative_base
 from sqlalchemy.orm import sessionmaker, scoped_session
 from sqlalchemy.sql import expression
 
@@ -228,7 +228,7 @@ def update_machine_status():
         current_time = datetime.now()
 
         # Ambil atau buat machine baru
-        machine = Machine.query.get(machine_id)
+        machine = db_session.get(Machine, machine_id)
         if not machine:
             machine = Machine(machine_id=machine_id)
             db_session.add(machine)
