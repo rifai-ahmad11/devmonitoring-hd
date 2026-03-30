@@ -85,7 +85,7 @@ def get_maintenance_description(item):
     return descriptions.get(item, 'Perlu perawatan rutin.')
 
 def calculate_required_maintenance(machine_id):
-    machine = Machine.query.get(machine_id)
+    machine = db_session.get(Machine, machine_id)
     if not machine:
         return []
     completed_dialysis = machine.completed_dialysis
@@ -101,8 +101,8 @@ def calculate_required_maintenance(machine_id):
                 'name': get_maintenance_name(item),
                 'description': get_maintenance_description(item),
                 'threshold': threshold,
-                'treatments_since_last': completed_dialysis - last_maintenance_dialysis,   # tetap kirim dengan nama lama (frontend akan disesuaikan)
-                'last_maintenance_treatment': last_maintenance_dialysis
+                'treatments_since_last': completed_dialysis - last_dialysis,
+                'last_maintenance_treatment': last_dialysis
             })
     return maintenance_required
 
@@ -259,8 +259,7 @@ def update_machine_status():
             machine.status = 'stopped'
             # Jika pompa masih running, stop juga
             if machine.pump_status == 'running':
-                # logika stop dialysis (akan dipisah)
-                stop_dialysis_session(machine, current_time)
+                stop_dialysis_session_db(machine, current_time)
 
         db_session.commit()
 
@@ -431,18 +430,17 @@ def get_machine_data_for_emit(machine_data, machine_id):
         'current_dialysis_duration': machine_data.get('current_dialysis_duration', 0)
     }
 
-def stop_dialysis_session(machine_data, current_time):
-    if machine_data['dialysis_session_start']:
-        session_duration = (current_time - machine_data['dialysis_session_start']).total_seconds()
-        machine_data['total_dialysis_time'] += session_duration
-        
+def stop_dialysis_session_db(machine: Machine, current_time: datetime):
+    """Menghentikan sesi dialysis pada objek SQLAlchemy Machine."""
+    if machine.dialysis_session_start:
+        session_duration = (current_time - machine.dialysis_session_start).total_seconds()
+        machine.total_dialysis_time += session_duration
         if session_duration >= MIN_DIALYSIS_DURATION:
-            machine_data['completed_dialysis'] += 1
-            print(f"Machine: Dialysis completed via timeout (duration: {session_duration:.0f}s)")
-        
-        machine_data['dialysis_session_start'] = None
-        machine_data['current_dialysis_duration'] = 0
-        machine_data['pump_status'] = 'stopped'
+            machine.completed_dialysis += 1
+            print(f"Machine {machine.machine_id}: Dialysis completed via timeout (duration: {session_duration:.0f}s)")
+        machine.dialysis_session_start = None
+        machine.pump_status = 'stopped'
+        # current_dialysis_duration tidak disimpan di DB, dihitung ulang saat dibutuhkan
 
 # Background tasks (sama, tapi tambah logic untuk dialysis timeout)
 def check_machine_timeout():
