@@ -3,6 +3,7 @@ from flask import Flask, render_template, request, jsonify, session, redirect, u
 from flask_socketio import SocketIO, emit
 from datetime import datetime, timedelta
 from functools import wraps
+import traceback
 import threading
 import time
 from sqlalchemy import create_engine, Column, String, Float, Integer, DateTime, Text, func
