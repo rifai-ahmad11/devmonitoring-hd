@@ -215,6 +215,8 @@ def log_error():
     except Exception as e:
         print(f"Error logging error: {e}")
         return jsonify({'error': 'Internal server error'}), 500
+        import traceback
+        traceback.print_exc()
 
 @app.route('/update', methods=['POST'])
 def update_machine_status():
@@ -271,6 +273,8 @@ def update_machine_status():
         db_session.rollback()
         print(f"Error: {e}")
         return jsonify({'error': 'Internal server error'}), 500
+        import traceback
+        traceback.print_exc()
 
 # Endpoint baru untuk status pompa
 @app.route('/pump-status', methods=['POST'])
@@ -331,6 +335,8 @@ def update_pump_status():
     except Exception as e:
         print(f"Error updating pump status: {e}")
         return jsonify({'error': 'Internal server error'}), 500
+        import traceback
+        traceback.print_exc()
 
 # Endpoint untuk menandai maintenance sudah dilakukan
 @app.route('/maintenance-done', methods=['POST'])
@@ -368,6 +374,8 @@ def mark_maintenance_done():
     except Exception as e:
         print(f"Error marking maintenance done: {e}")
         return jsonify({'error': 'Internal server error'}), 500
+        import traceback
+        traceback.print_exc()
 
 #Endpoint hapus mesin
 @app.route('/delete-machine', methods=['POST'])
@@ -389,6 +397,8 @@ def delete_machine():
 
     except Exception as e:
         return jsonify({'error': 'Internal server error'}), 500
+        import traceback
+        traceback.print_exc()
 
 # Helper functions
 def create_new_machine(machine_id, current_time):
