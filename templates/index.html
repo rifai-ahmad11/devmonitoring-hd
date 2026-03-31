@@ -274,6 +274,38 @@
             color: white;
         }
 
+        /* Refresh button di pojok kiri atas */
+        .refresh-btn {
+            position: fixed;
+            top: 20px;
+            left: 20px;
+            background-color: rgba(255, 255, 255, 0.9);
+            color: #333;
+            padding: 8px 15px;
+            border-radius: 20px;
+            font-size: 0.9em;
+            font-weight: bold;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+            cursor: pointer;
+            transition: all 0.3s ease;
+            z-index: 1000;
+            backdrop-filter: blur(4px);
+        }
+        
+        .refresh-btn:hover {
+            background-color: white;
+            transform: scale(1.02);
+            box-shadow: 0 6px 16px rgba(0, 0, 0, 0.3);
+        }
+        
+        .refresh-icon {
+            font-size: 1.2em;
+            display: inline-block;
+        }
+
         .status-dot {
             width: 8px;
             height: 8px;
@@ -555,6 +587,10 @@
                 <p>Mesin akan muncul di sini ketika terhubung</p>
             </div>
         </div>
+    </div>
+
+    <div class="refresh-btn" id="refreshButton">
+        <span class="refresh-icon">↻</span> refresh halaman untuk data terkini
     </div>
 
     <div class="connection-status disconnected" id="connectionStatus">
@@ -1024,6 +1060,14 @@
 
         // Panggil saat halaman dimuat
         window.addEventListener('load', loadInitialData);
+
+        // Tombol refresh halaman
+        const refreshButton = document.getElementById('refreshButton');
+        if (refreshButton) {
+            refreshButton.addEventListener('click', () => {
+                window.location.reload();
+            });
+        }
 
         // Update setInterval untuk handle dialysis time juga
         setInterval(() => {
