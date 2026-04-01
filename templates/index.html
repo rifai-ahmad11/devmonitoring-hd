@@ -323,23 +323,7 @@
             }
         }
 
-        /* Error Badge */
-        .error-badge {
-            background-color: #ff4757;
-            color: white;
-            padding: 6px 10px;
-            border-radius: 12px;
-            font-size: 0.75em;
-            font-weight: bold;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            animation: blink 2s infinite;
-        }
 
-        .error-badge:hover {
-            background-color: #ff3742;
-            transform: scale(1.05);
-        }
 
         @keyframes blink {
             0%, 50% {
@@ -773,8 +757,7 @@
             
             // Buat badge-badge
             const errorCount = data.error_count || 0;
-            const errorBadge = errorCount > 0 ? 
-                `<span class="error-badge">${errorCount} Error</span>` : '';
+            
             
             const maintenanceBadgeHTML = maintenanceCount > 0 ? 
                 `<span class="maintenance-badge" data-machine-id="${machineId}">⚠️ ${maintenanceCount} Maintenance</span>` : '';
@@ -789,7 +772,6 @@
                         <div class="machine-id-sn">${parsed.sn}</div>
                     </div>
                     <div class="header-badges">
-                        ${errorBadge}
                         ${maintenanceBadgeHTML}
                         <div class="status-badge ${statusClass}">${statusText}</div>
                         <div class="status-badge ${pumpStatusClass}" style="background-color: #2196f3;">${pumpStatusText}</div>
@@ -877,8 +859,6 @@
             
             // Buat badge-badge
             const errorCount = data.error_count || 0;
-            const errorBadge = errorCount > 0 ? 
-                `<span class="error-badge">${errorCount} Error</span>` : '';
             
             const maintenanceBadgeHTML = maintenanceCount > 0 ? 
                 `<span class="maintenance-badge" data-machine-id="${machineId}">⚠️ ${maintenanceCount} Maintenance</span>` : '';
@@ -893,7 +873,6 @@
                         <div class="machine-id-sn">${parsed.sn}</div>
                     </div>
                     <div class="header-badges">
-                        ${errorBadge}
                         ${maintenanceBadgeHTML}
                         <div class="status-badge ${statusClass}">${statusText}</div>
                         <div class="status-badge ${pumpStatusClass}" style="background-color: #2196f3;">${pumpStatusText}</div>
