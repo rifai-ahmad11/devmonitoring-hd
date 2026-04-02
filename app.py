@@ -19,7 +19,7 @@ socketio = SocketIO(app)
 LOGIN_PASSWORD = os.environ.get('DASHBOARD_PASSWORD', 'OJI2026!')
 
 # Konfigurasi database
-DATABASE_URL = os.environ.get('DATABASE_URL', 'postgresql://postgres:fAfrLTxIvblQAiXDRvllRuJqiGgzYBvx@turntable.proxy.rlwy.net:29037/railway')
+DATABASE_URL = os.environ.get('DATABASE_URL', 'postgresql://postgres:LDYFsrAvLIHOGLULBRCqvoaylmUSIRTu@interchange.proxy.rlwy.net:46023/railway')
 engine = create_engine(DATABASE_URL, pool_size=10, max_overflow=20)
 db_session = scoped_session(sessionmaker(bind=engine))
 Base = declarative_base()
@@ -65,11 +65,11 @@ Base.metadata.create_all(bind=engine)
 
 # Konfigurasi threshold
 MAINTENANCE_THRESHOLDS = {
-    'filter_inlet': 5,  # completed dialysis
+    'filter_inlet': 200,  # completed dialysis
 }
-MIN_DIALYSIS_DURATION = 60  # detik (sesuai kebutuhan)
-MIN_TREATMENT_DURATION = 60  # detik
-HEARTBEAT_TIMEOUT = 90  # detik
+MIN_DIALYSIS_DURATION = 3600  # detik 1 jam lebih singkat dibanding active
+MIN_TREATMENT_DURATION = 5440  # detik 1,5 jam
+HEARTBEAT_TIMEOUT = 390  # detik 6,5 menit baru mesin mati
 
 # --- Helper Functions ---
 def get_maintenance_name(item):
