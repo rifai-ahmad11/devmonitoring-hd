@@ -1,7 +1,7 @@
 import os
 from flask import Flask, render_template, request, jsonify, session, redirect, url_for
 from flask_socketio import SocketIO, emit
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from functools import wraps
 import threading
 import time
@@ -132,7 +132,7 @@ def get_machine_data_for_emit(machine: Machine):
     return {
         'machine_id': machine.machine_id,
         'status': machine.status,
-        'last_update': machine.last_update.isoformat() if machine.last_update else None,
+        'last_update': machine.last_update.isoformat() + 'Z' if machine.last_update else None,
         'total_active_time': machine.total_active_time,
         'current_session_duration': current_session_duration,
         'last_heartbeat': machine.last_heartbeat.isoformat() if machine.last_heartbeat else None,
@@ -209,7 +209,7 @@ def log_error():
         if not machine_id or error_code is None:
             return jsonify({'error': 'Missing machine_id or error_code'}), 400
 
-        current_time = datetime.now()
+        current_time = datetime.utcnow()
         # Ambil atau buat machine
         machine = db_session.get(Machine, machine_id)
         if not machine:
@@ -262,7 +262,7 @@ def update_machine_status():
         if not machine_id or not status:
             return jsonify({'error': 'Missing machine_id or status'}), 400
 
-        current_time = datetime.now()
+        current_time = datetime.utcnow()
         machine = db_session.get(Machine, machine_id)
         if not machine:
             machine = Machine(machine_id=machine_id)
@@ -314,7 +314,7 @@ def update_pump_status():
         if not machine_id or not pump_status:
             return jsonify({'error': 'Missing machine_id or pump_status'}), 400
 
-        current_time = datetime.now()
+        current_time = datetime.utcnow()
         machine = db_session.get(Machine, machine_id)
         if not machine:
             machine = Machine(machine_id=machine_id)
@@ -416,7 +416,7 @@ def check_machine_timeout():
     while True:
         time.sleep(5)
         try:
-            current_time = datetime.now()
+            current_time = datetime.utcnow()
             # Cari semua mesin dengan status running dan heartbeat kadaluarsa
             timeout_threshold = current_time - timedelta(seconds=HEARTBEAT_TIMEOUT)
             machines_timeout = db_session.query(Machine).filter(
