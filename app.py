@@ -448,25 +448,12 @@ def check_machine_timeout():
             # Pastikan session ditutup (scoped_session akan handle)
             db_session.remove()
 
-def broadcast_machine_updates():
-    """Broadcast update semua mesin secara periodik (untuk real-time)."""
-    while True:
-        time.sleep(10)
-        try:
-            machines = db_session.query(Machine).all()
-            for machine in machines:
-                emit_machine_update(machine.machine_id)
-        except Exception as e:
-            print(f"Error in broadcast_machine_updates: {e}")
-            traceback.print_exc()
-        finally:
-            db_session.remove()
+
 
 # Mulai background threads
 timeout_thread = threading.Thread(target=check_machine_timeout, daemon=True)
 timeout_thread.start()
-broadcast_thread = threading.Thread(target=broadcast_machine_updates, daemon=True)
-broadcast_thread.start()
+
 
 # --- Main ---
 if __name__ == '__main__':
