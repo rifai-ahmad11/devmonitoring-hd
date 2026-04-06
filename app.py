@@ -12,7 +12,6 @@ from sqlalchemy.sql import expression
 # Inisialisasi Flask
 app = Flask(__name__)
 app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'your_secret_key_here')
-socketio = SocketIO(app)
 
 # Password login (gunakan environment variable untuk produksi)
 LOGIN_PASSWORD = os.environ.get('DASHBOARD_PASSWORD', 'OJI2026!')
