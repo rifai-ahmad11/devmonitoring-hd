@@ -442,4 +442,4 @@ timeout_thread.start()
 # --- Main ---
 if __name__ == '__main__':
     print("Starting Machine Monitoring Server with PostgreSQL (no SocketIO)...")
-    app.run(host='0.0.0.0', port=5000, allow_unsafe_werkzeug=True)
+    app.run(host='0.0.0.0', port=5000, debug=False)
