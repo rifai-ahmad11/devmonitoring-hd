@@ -562,14 +562,24 @@
     <div class="dashboard-container">
         <div class="header">
             <h1>HD Machine Monitoring Dashboard</h1>
-            <p>Sistem monitoring mesin hemodialisis (update durasi real-time, status hanya saat refresh)</p>
+            <p>Sistem monitoring real-time mesin hemodialisis</p>
         </div>
+
         <div class="machines-grid" id="machinesGrid">
             <div class="empty-state">
-                <h2>⏳ Memuat data...</h2>
-                <p>Harap tunggu</p>
+                <h2>⏳ Menunggu data mesin...</h2>
+                <p>Mesin akan muncul di sini ketika terhubung</p>
             </div>
         </div>
+    </div>
+
+    <!--<div class="refresh-btn" id="refreshButton">  
+        <span class="refresh-icon">↻</span> Refresh halaman untuk data terkini
+    </div>   -->
+
+    <div class="connection-status disconnected" id="connectionStatus">
+        <span class="status-dot"></span>
+        <span id="statusText">Terputus</span>
     </div>
 
     <!-- Maintenance Modal -->
@@ -581,18 +591,46 @@
             </div>
             <div class="modal-body">
                 <span class="machine-id-modal">Serial Number: <span id="modalMachineId"></span></span>
-                <ul class="maintenance-list" id="maintenanceList"></ul>
-                <div class="threshold-info">Threshold: 200 treatment</div>
+                
+                <p style="margin-bottom: 15px; color: #666;">
+                    Berikut adalah daftar komponen yang memerlukan perawatan:
+                </p>
+                
+                <ul class="maintenance-list" id="maintenanceList">
+                    <!-- Maintenance items will be inserted here -->
+                </ul>
+                
+                <div class="threshold-info">
+                    <strong>📋 Threshold Maintenance:</strong><br>
+                    Filter Endotoksin: Setiap 200 kali treatment
+                </div>
+                
+                <div class="threshold-note">
+                    *Note: Threshold ini merupakan estimasi. 
+                    Nilai sebenarnya dapat disesuaikan sesuai kebutuhan.
+                </div>
             </div>
         </div>
     </div>
 
     <script>
-        const machinesGrid = document.getElementById('machinesGrid');
-        let currentMachines = {};      // menyimpan data mesin terakhir dari server
-        let timerInterval = null;
+        // Inisialisasi SocketIO
+        //const socket = io();
+        //const machinesGrid = document.getElementById('machinesGrid');
+        //const connectionStatus = document.getElementById('connectionStatus');
+        //const statusText = document.getElementById('statusText');
+        
+        // Modal elements
+        const maintenanceModal = document.getElementById('maintenanceModal');
+        const modalMachineId = document.getElementById('modalMachineId');
+        const maintenanceList = document.getElementById('maintenanceList');
+        const closeButton = maintenanceModal.querySelector('.close-button');
+        
+        // Menyimpan referensi ke machine cards
+        const machineCards = {};
+        let machineCount = 0;
 
-        // Format waktu
+        // Format waktu ke format yang readable
         function formatTime(seconds) {
             const hours = Math.floor(seconds / 3600);
             const minutes = Math.floor((seconds % 3600) / 60);
@@ -600,80 +638,132 @@
             return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
         }
 
+        // Format tanggal dan waktu
         function formatDateTime(isoString) {
             if (!isoString) return 'Belum ada update';
             const date = new Date(isoString);
-            return date.toLocaleString('id-ID');
+            return date.toLocaleString('id-ID', {
+                year: 'numeric',
+                month: '2-digit',
+                day: '2-digit',
+                hour: '2-digit',
+                minute: '2-digit',
+                second: '2-digit'
+            });
         }
 
+        //Parse id mesin
         function parseMachineId(fullId) {
             const parts = fullId.split('-');
-            return { id: parts[0] || fullId, rs: parts[1] || '', sn: parts[2] || '' };
+            return {
+                id: parts[0] || fullId,        // bagian pertama: HD_001
+                rs: parts[1] || '',             // bagian kedua: RS Harapan Kita_1
+                sn: parts[2] || ''               // bagian ketiga: XT054101
+            };
         }
-
-        // Modal handling
-        const modal = document.getElementById('maintenanceModal');
-        const modalMachineIdSpan = document.getElementById('modalMachineId');
-        const maintenanceList = document.getElementById('maintenanceList');
-        const closeBtn = modal.querySelector('.close-button');
-
+        
+        // Fungsi untuk menampilkan modal maintenance
         function showMaintenanceModal(machineId, maintenanceItems) {
             const parsed = parseMachineId(machineId);
-            modalMachineIdSpan.textContent = parsed.sn;
+            modalMachineId.textContent = parsed.sn;
             maintenanceList.innerHTML = '';
+            
             maintenanceItems.forEach(item => {
                 const li = document.createElement('li');
                 li.className = 'maintenance-item';
                 li.innerHTML = `
                     <div class="maintenance-item-header">
                         <div class="maintenance-item-title">${item.name}</div>
-                        <button class="mark-done-btn" data-machine-id="${machineId}" data-item="${item.item}">✓ Selesai</button>
+                        <button class="mark-done-btn" data-machine-id="${machineId}" data-item="${item.item}">
+                            ✓ Selesai
+                        </button>
                     </div>
                     <div class="maintenance-item-desc">${item.description}</div>
-                    <div class="maintenance-item-details">Threshold: ${item.threshold} treatment<br>Sejak maintenance terakhir: ${item.treatments_since_last}</div>
+                    <div class="maintenance-item-details">
+                        Threshold: Setiap ${item.threshold} treatment<br>
+                        Treatment sejak terakhir maintenance: ${item.treatments_since_last}
+                    </div>
                 `;
                 maintenanceList.appendChild(li);
             });
+            
+            // Tambahkan event listeners untuk tombol "Mark as Done"
             document.querySelectorAll('.mark-done-btn').forEach(btn => {
-                btn.addEventListener('click', () => markMaintenanceDone(btn.dataset.machineId, btn.dataset.item));
+                btn.addEventListener('click', function() {
+                    const machineId = this.dataset.machineId;
+                    const item = this.dataset.item;
+                    markMaintenanceDone(machineId, item);
+                });
             });
-            modal.style.display = 'block';
+            
+            maintenanceModal.style.display = 'block';
         }
 
+        // Fungsi untuk mengirim request ke server saat maintenance dilakukan
         async function markMaintenanceDone(machineId, item) {
             try {
-                const resp = await fetch('/maintenance-done', {
+                const response = await fetch('/maintenance-done', {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ machine_id: machineId, maintenance_item: item })
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        machine_id: machineId,
+                        maintenance_item: item
+                    })
                 });
-                const result = await resp.json();
+                
+                const result = await response.json();
                 if (result.success) {
-                    alert(`Maintenance ${item} selesai`);
-                    modal.style.display = 'none';
-                    // Setelah maintenance, reload data dari server agar maintenance_required terupdate
-                    await loadMachines();
-                } else alert(`Error: ${result.error}`);
-            } catch(e) { console.error(e); alert('Gagal'); }
+                    alert(`Maintenance ${item} telah ditandai selesai`);
+                    maintenanceModal.style.display = 'none';
+                } else {
+                    alert(`Error: ${result.error}`);
+                }
+            } catch (error) {
+                console.error('Error marking maintenance done:', error);
+                alert('Gagal menandai maintenance sebagai selesai');
+            }
         }
 
-        closeBtn.onclick = () => modal.style.display = 'none';
-        window.onclick = (e) => { if (e.target === modal) modal.style.display = 'none'; };
+        // Event listener untuk menutup modal
+        closeButton.addEventListener('click', () => {
+            maintenanceModal.style.display = 'none';
+        });
 
-        // Membuat card dari data (tanpa event listener untuk update durasi, nanti diupdate oleh timer)
+        // Tutup modal jika klik di luar modal
+        window.addEventListener('click', (event) => {
+            if (event.target === maintenanceModal) {
+                maintenanceModal.style.display = 'none';
+            }
+        });
+
+        // Update fungsi createMachineCard dan updateMachineCard:
+
         function createMachineCard(machineId, data) {
             const card = document.createElement('div');
             card.className = 'machine-card';
             card.id = `machine-${machineId}`;
+            
             const statusClass = data.status === 'running' ? 'running' : 'stopped';
             const statusText = data.status === 'running' ? '▶ HD ON' : '⏹ HD OFF';
+            
             const pumpStatusClass = data.pump_status === 'running' ? 'running' : 'stopped';
             const pumpStatusText = data.pump_status === 'running' ? 'TREATMENT' : 'IDLE';
-            const errorCount = data.error_count || 0;
+            
+            // Gunakan data dari server untuk maintenance
+            const maintenanceItems = data.maintenance_required || [];
             const maintenanceCount = data.maintenance_count || 0;
-            const errorBadge = errorCount > 0 ? `<span class="error-badge">${errorCount} Error</span>` : '';
-            const maintenanceBadge = maintenanceCount > 0 ? `<span class="maintenance-badge" data-machine-id="${machineId}">⚠️ ${maintenanceCount} Maintenance</span>` : '';
+            
+            // Buat badge-badge
+            const errorCount = data.error_count || 0;
+            
+            
+            const maintenanceBadgeHTML = maintenanceCount > 0 ? 
+                `<span class="maintenance-badge" data-machine-id="${machineId}">⚠️ ${maintenanceCount} Maintenance</span>` : '';
+          
             const parsed = parseMachineId(machineId);
+
             card.innerHTML = `
                 <div class="machine-header">
                     <div class="machine-id">
@@ -682,106 +772,271 @@
                         <div class="machine-id-sn">${parsed.sn}</div>
                     </div>
                     <div class="header-badges">
-                        ${errorBadge}
-                        ${maintenanceBadge}
+                        ${maintenanceBadgeHTML}
                         <div class="status-badge ${statusClass}">${statusText}</div>
-                        <div class="status-badge ${pumpStatusClass}" style="background-color:#2196f3;">${pumpStatusText}</div>
+                        <div class="status-badge ${pumpStatusClass}" style="background-color: #2196f3;">${pumpStatusText}</div>
                     </div>
                 </div>
                 <div class="machine-info">
-                    <div class="info-row"><span class="info-label">Total Error</span><span class="info-value ${errorCount>0?'error-value':''}">${errorCount}</span></div>
-                    <div class="info-row"><span class="info-label">Maintenance Diperlukan</span><span class="info-value">${maintenanceCount}</span></div>
-                    <div class="info-row"><span class="info-label">Waktu Aktif Sesi</span><div><span class="info-value time-value" id="session-dur-${machineId}">${formatTime(data.current_session_duration)}</span><small> Durasi Sesi</small></div></div>
-                    <div class="info-row"><span class="info-label">Total Waktu Aktif</span><span class="info-value time-value" id="total-active-${machineId}">${formatTime(data.total_active_time)}</span></div>
-                    <div class="info-row"><span class="info-label">Jumlah Sesi Aktif</span><span class="info-value" id="completed-treat-${machineId}">${data.completed_treatments}</span></div>
-                    <div class="info-row"><span class="info-label">Waktu Treatment Sesi</span><div><span class="info-value time-value" id="dialysis-dur-${machineId}" style="background:linear-gradient(135deg,#2196f3,#1976d2)">${formatTime(data.current_dialysis_duration)}</span><small> Durasi Sesi</small></div></div>
-                    <div class="info-row"><span class="info-label">Total Waktu Treatment</span><span class="info-value time-value" id="total-dialysis-${machineId}" style="background:linear-gradient(135deg,#2196f3,#1976d2)">${formatTime(data.total_dialysis_time)}</span></div>
-                    <div class="info-row"><span class="info-label">Jumlah Treatment Selesai</span><span class="info-value" id="completed-dialysis-${machineId}">${data.completed_dialysis}</span></div>
-                    <div class="last-update">Update: ${formatDateTime(data.last_update)}</div>
+                    <div class="info-row">
+                        <span class="info-label">Total Kegagalan Koneksi</span>
+                        <span class="info-value ${errorCount > 0 ? 'error-value' : ''}">${errorCount}</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">Jumlah Maintenance Diperlukan</span>
+                        <span class="info-value ${maintenanceCount > 0 ? 'error-value' : ''}">${maintenanceCount}</span>
+                    </div>
+                    
+                    <!-- Sesi Treatment -->
+                    <div class="info-row" style="margin-top: 10px; padding-top: 10px; border-top: 1px dashed #ddd;">
+                        <span class="info-label">Waktu Aktif</span>
+                        <div style="display: flex; flex-direction: column; align-items: flex-end;">
+                            <span class="info-value time-value">${formatTime(data.current_session_duration || 0)}</span>
+                            <small style="font-size: 0.8em; color: #666;">Durasi Sesi</small>
+                        </div>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">Total Waktu Aktif</span>
+                        <span class="info-value time-value">${formatTime(data.total_active_time || 0)}</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">Jumlah Sesi Aktif Selesai</span>
+                        <span class="info-value">${data.completed_treatments || 0}</span>
+                    </div>
+                    
+                    <!-- Sesi Dialysis -->
+                    <div class="info-row" style="margin-top: 10px; padding-top: 10px; border-top: 1px dashed #ddd;">
+                        <span class="info-label">Waktu Treatment</span>
+                        <div style="display: flex; flex-direction: column; align-items: flex-end;">
+                            <span class="info-value time-value" style="background: linear-gradient(135deg, #2196f3 0%, #1976d2 100%);">
+                                ${formatTime(data.current_dialysis_duration || 0)}
+                            </span>
+                            <small style="font-size: 0.8em; color: #666;">Durasi Sesi</small>
+                        </div>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">Total Waktu Treatment</span>
+                        <span class="info-value time-value" style="background: linear-gradient(135deg, #2196f3 0%, #1976d2 100%);">
+                            ${formatTime(data.total_dialysis_time || 0)}
+                        </span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">Jumlah Treatment Selesai</span>
+                        <span class="info-value">${data.completed_dialysis || 0}</span>
+                    </div>
+                    
+                    <div class="last-update">
+                        Terakhir update: ${formatDateTime(data.last_update)}
+                    </div>
                 </div>
             `;
-            const maintBadgeElem = card.querySelector('.maintenance-badge');
-            if (maintBadgeElem) maintBadgeElem.addEventListener('click', () => showMaintenanceModal(machineId, data.maintenance_required));
+            
+            // Tambahkan event listener untuk maintenance badge
+            const maintenanceBadgeElement = card.querySelector('.maintenance-badge');
+            if (maintenanceBadgeElement) {
+                maintenanceBadgeElement.addEventListener('click', () => {
+                    showMaintenanceModal(machineId, maintenanceItems);
+                });
+            }
+            
             return card;
         }
 
-        // Fungsi untuk memperbarui tampilan durasi berdasarkan timer lokal
-        function updateTimers() {
-            const now = new Date();
-            for (const [machineId, data] of Object.entries(currentMachines)) {
-                const sessionSpan = document.getElementById(`session-dur-${machineId}`);
-                const dialysisSpan = document.getElementById(`dialysis-dur-${machineId}`);
-                if (sessionSpan && data.status === 'running' && data.current_session_start) {
-                    // Hitung durasi dari waktu mulai sesi (dari server) + waktu berlalu sejak load
-                    // Kita simpan timestamp awal saat load untuk menghitung delta
-                    if (!data._session_start_ts) {
-                        data._session_start_ts = new Date(data.current_session_start).getTime();
-                    }
-                    let elapsed = (now.getTime() - data._session_start_ts) / 1000;
-                    if (elapsed < 0) elapsed = 0;
-                    sessionSpan.textContent = formatTime(elapsed);
-                }
-                if (dialysisSpan && data.pump_status === 'running' && data.dialysis_session_start) {
-                    if (!data._dialysis_start_ts) {
-                        data._dialysis_start_ts = new Date(data.dialysis_session_start).getTime();
-                    }
-                    let elapsed = (now.getTime() - data._dialysis_start_ts) / 1000;
-                    if (elapsed < 0) elapsed = 0;
-                    dialysisSpan.textContent = formatTime(elapsed);
-                }
+        // Update fungsi updateMachineCard dengan struktur yang sama
+        function updateMachineCard(machineId, data) {
+            const card = document.getElementById(`machine-${machineId}`);
+            if (!card) return;
+
+            const statusClass = data.status === 'running' ? 'running' : 'stopped';
+            const statusText = data.status === 'running' ? '▶ HD ON' : '⏹ HD OFF';
+            
+            const pumpStatusClass = data.pump_status === 'running' ? 'running' : 'stopped';
+            const pumpStatusText = data.pump_status === 'running' ? 'TREATMENT' : 'IDLE';
+            
+            // Gunakan data dari server untuk maintenance
+            const maintenanceItems = data.maintenance_required || [];
+            const maintenanceCount = data.maintenance_count || 0;
+            
+            // Buat badge-badge
+            const errorCount = data.error_count || 0;
+            
+            const maintenanceBadgeHTML = maintenanceCount > 0 ? 
+                `<span class="maintenance-badge" data-machine-id="${machineId}">⚠️ ${maintenanceCount} Maintenance</span>` : '';
+            
+            const parsed = parseMachineId(machineId);
+            
+            card.innerHTML = `
+                <div class="machine-header">
+                    <div class="machine-id">
+                        <div class="machine-id-main">${parsed.id}</div>
+                        <div class="machine-id-rs">${parsed.rs}</div>
+                        <div class="machine-id-sn">${parsed.sn}</div>
+                    </div>
+                    <div class="header-badges">
+                        ${maintenanceBadgeHTML}
+                        <div class="status-badge ${statusClass}">${statusText}</div>
+                        <div class="status-badge ${pumpStatusClass}" style="background-color: #2196f3;">${pumpStatusText}</div>
+                    </div>
+                </div>
+                <div class="machine-info">
+                    <div class="info-row">
+                        <span class="info-label">Total Kegagalan Koneksi</span>
+                        <span class="info-value ${errorCount > 0 ? 'error-value' : ''}">${errorCount}</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">Jumlah Maintenance Diperlukan</span>
+                        <span class="info-value ${maintenanceCount > 0 ? 'error-value' : ''}">${maintenanceCount}</span>
+                    </div>
+                    
+                    <!-- Sesi Treatment -->
+                    <div class="info-row" style="margin-top: 10px; padding-top: 10px; border-top: 1px dashed #ddd;">
+                        <span class="info-label">Waktu Aktif</span>
+                        <div style="display: flex; flex-direction: column; align-items: flex-end;">
+                            <span class="info-value time-value">${formatTime(data.current_session_duration || 0)}</span>
+                            <small style="font-size: 0.8em; color: #666;">Durasi Sesi</small>
+                        </div>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">Total Waktu Aktif</span>
+                        <span class="info-value time-value">${formatTime(data.total_active_time || 0)}</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">Jumlah Sesi Aktif Selesai</span>
+                        <span class="info-value">${data.completed_treatments || 0}</span>
+                    </div>
+                    
+                    <!-- Sesi Dialysis -->
+                    <div class="info-row" style="margin-top: 10px; padding-top: 10px; border-top: 1px dashed #ddd;">
+                        <span class="info-label">Waktu Treatment</span>
+                        <div style="display: flex; flex-direction: column; align-items: flex-end;">
+                            <span class="info-value time-value" style="background: linear-gradient(135deg, #2196f3 0%, #1976d2 100%);">
+                                ${formatTime(data.current_dialysis_duration || 0)}
+                            </span>
+                            <small style="font-size: 0.8em; color: #666;">Durasi Sesi</small>
+                        </div>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">Total Waktu Treatment</span>
+                        <span class="info-value time-value" style="background: linear-gradient(135deg, #2196f3 0%, #1976d2 100%);">
+                            ${formatTime(data.total_dialysis_time || 0)}
+                        </span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">Jumlah Treatment Selesai</span>
+                        <span class="info-value">${data.completed_dialysis || 0}</span>
+                    </div>
+            `;
+            
+            // Tambahkan event listener untuk maintenance badge
+            const maintenanceBadgeElement = card.querySelector('.maintenance-badge');
+            if (maintenanceBadgeElement) {
+                maintenanceBadgeElement.addEventListener('click', () => {
+                    showMaintenanceModal(machineId, maintenanceItems);
+                });
             }
         }
 
-        // Memuat data dari server, membangun ulang seluruh grid, dan menyimpan data awal + timestamp
-        async function loadMachines() {
+        // Menghapus card machine
+        function removeMachineCard(machineId) {
+            const card = document.getElementById(`machine-${machineId}`);
+            if (card) {
+                card.classList.add('removing');
+                setTimeout(() => {
+                    card.remove();
+                    delete machineCards[machineId];
+                    machineCount--;
+                    
+                    // Tampilkan empty state jika tidak ada machine
+                    if (machineCount === 0) {
+                        machinesGrid.innerHTML = `
+                            <div class="empty-state">
+                                <h2>⏳ Menunggu data mesin...</h2>
+                                <p>Mesin akan muncul di sini ketika terhubung</p>
+                            </div>
+                        `;
+                    }
+                }, 400);
+            }
+        }
+
+        // Event: Koneksi berhasil
+
+        // Muat data awal dari server
+        async function loadInitialData() {
             try {
                 const response = await fetch('/api/machines');
                 const machines = await response.json();
-                const grid = machinesGrid;
-                // Hapus empty state jika ada
-                const emptyState = grid.querySelector('.empty-state');
-                if (emptyState) emptyState.remove();
-                // Simpan data ke currentMachines, tambahkan properti timestamp internal untuk timer
-                for (const [id, data] of Object.entries(machines)) {
-                    // Simpan timestamp mulai sesi berdasarkan data dari server
-                    if (data.current_session_start) {
-                        data._session_start_ts = new Date(data.current_session_start).getTime();
-                    } else {
-                        data._session_start_ts = null;
+                
+                console.log('📥 Data awal dimuat:', machines);
+                
+                // Tampilkan semua machine yang ada
+                for (const [machineId, data] of Object.entries(machines)) {
+                    if (!machineCards[machineId]) {
+                        machineCards[machineId] = true;
+                        machineCount++;
+                        
+                        // Hapus empty state
+                        const emptyState = machinesGrid.querySelector('.empty-state');
+                        if (emptyState) {
+                            emptyState.remove();
+                        }
+                        
+                        // Tambahkan card
+                        const newCard = createMachineCard(machineId, data);
+                        machinesGrid.appendChild(newCard);
                     }
-                    if (data.dialysis_session_start) {
-                        data._dialysis_start_ts = new Date(data.dialysis_session_start).getTime();
-                    } else {
-                        data._dialysis_start_ts = null;
-                    }
-                    currentMachines[id] = data;
                 }
-                // Render ulang semua card
-                grid.innerHTML = '';
-                for (const [id, data] of Object.entries(currentMachines)) {
-                    grid.appendChild(createMachineCard(id, data));
-                }
-                if (Object.keys(currentMachines).length === 0) {
-                    grid.innerHTML = '<div class="empty-state"><h2>⏳ Belum ada mesin</h2><p>Mesin akan muncul ketika terhubung</p></div>';
-                }
-            } catch (err) {
-                console.error('Gagal load data:', err);
+            } catch (error) {
+                console.error('❌ Error memuat data awal:', error);
             }
         }
 
-        // Memulai timer lokal (setiap detik)
-        function startLocalTimer() {
-            if (timerInterval) clearInterval(timerInterval);
-            timerInterval = setInterval(() => {
-                updateTimers();
-            }, 1000);
+        // Panggil saat halaman dimuat
+        window.addEventListener('load', loadInitialData);
+
+        // Tombol refresh halaman
+        const refreshButton = document.getElementById('refreshButton');
+        if (refreshButton) {
+            refreshButton.addEventListener('click', () => {
+                window.location.reload();
+            });
         }
 
-        // Inisialisasi: load data sekali lalu mulai timer
-        window.addEventListener('load', async () => {
-            await loadMachines();
-            startLocalTimer();
-        });
+        // Update setInterval untuk handle dialysis time juga
+        setInterval(() => {
+            for (const machineId of Object.keys(machineCards)) {
+                const card = document.getElementById(`machine-${machineId}`);
+                if (card) {
+                    const timeValueElements = card.querySelectorAll('.time-value');
+                    const statusBadge = card.querySelector('.status-badge');
+                    const pumpStatusBadge = card.querySelector('.status-badge[style*="background-color: #2196f3"]');
+                    
+                    // Update treatment time jika mesin running
+                    if (statusBadge && statusBadge.classList.contains('running')) {
+                        const treatmentTimeElement = timeValueElements[0]; // First time-value is treatment
+                        if (treatmentTimeElement) {
+                            const currentTimeStr = treatmentTimeElement.textContent;
+                            const [hours, minutes, seconds] = currentTimeStr.split(':').map(Number);
+                            let totalSeconds = hours * 3600 + minutes * 60 + seconds + 1;
+                            treatmentTimeElement.textContent = formatTime(totalSeconds);
+                        }
+                    }
+                    
+                    // Update dialysis time jika pump running
+                    if (pumpStatusBadge && pumpStatusBadge.textContent.includes('TREATMENT')) {
+                        // Find dialysis time element (it's the third time-value with blue background)
+                        const dialysisTimeElements = card.querySelectorAll('.time-value[style*="background: linear-gradient(135deg, #2196f3"]');
+                        if (dialysisTimeElements.length > 0) {
+                            const dialysisTimeElement = dialysisTimeElements[0]; // Current dialysis session
+                            const currentTimeStr = dialysisTimeElement.textContent;
+                            const [hours, minutes, seconds] = currentTimeStr.split(':').map(Number);
+                            let totalSeconds = hours * 3600 + minutes * 60 + seconds + 1;
+                            dialysisTimeElement.textContent = formatTime(totalSeconds);
+                        }
+                    }
+                }
+            }
+        }, 1000);
     </script>
 </body>
 </html>
