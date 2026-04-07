@@ -1,6 +1,5 @@
 import os
 from flask import Flask, render_template, request, jsonify, session, redirect, url_for
-from flask_socketio import SocketIO, emit
 from datetime import datetime, timedelta, timezone
 from functools import wraps
 import threading
@@ -13,7 +12,6 @@ from sqlalchemy.sql import expression
 # Inisialisasi Flask
 app = Flask(__name__)
 app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'your_secret_key_here')
-socketio = SocketIO(app)
 
 # Password login (gunakan environment variable untuk produksi)
 LOGIN_PASSWORD = os.environ.get('DASHBOARD_PASSWORD', 'OJI2026!')
@@ -64,9 +62,7 @@ class Maintenance(Base):
 Base.metadata.create_all(bind=engine)
 
 # Konfigurasi threshold
-MAINTENANCE_THRESHOLDS = {
-    'filter_inlet': 200,  # completed dialysis
-}
+MAINTENANCE_THRESHOLDS = {'filter_inlet': 200}  # completed dialysis
 MIN_DIALYSIS_DURATION = 3600  # detik 1 jam lebih singkat dibanding active
 MIN_TREATMENT_DURATION = 5440  # detik 1,5 jam
 HEARTBEAT_TIMEOUT = 390  # detik 6,5 menit baru mesin mati
@@ -146,12 +142,7 @@ def get_machine_data_for_emit(machine: Machine):
         'current_dialysis_duration': current_dialysis_duration
     }
 
-def emit_machine_update(machine_id):
-    """Helper untuk mengirim update via socket setelah perubahan."""
-    machine = db_session.get(Machine, machine_id)
-    if machine:
-        data = get_machine_data_for_emit(machine)
-        socketio.emit('machine_update', data)
+
 
 # --- Decorator untuk login ---
 def login_required(f):
@@ -244,7 +235,6 @@ def log_error():
         db_session.commit()
 
         print(f"Error logged for machine {machine_id}: Code {error_code}, Type: {error_type}")
-        emit_machine_update(machine_id)
         return jsonify({'success': True, 'message': 'Error logged successfully'})
 
     except Exception as e:
@@ -297,7 +287,6 @@ def update_machine_status():
                 stop_dialysis_session_db(machine, current_time)
 
         db_session.commit()
-        emit_machine_update(machine_id)
         return jsonify({'success': True})
     except Exception as e:
         db_session.rollback()
@@ -344,7 +333,6 @@ def update_pump_status():
             print(f"Machine {machine_id}: Pump STOPPED")
 
         db_session.commit()
-        emit_machine_update(machine_id)
         return jsonify({'success': True, 'message': 'Pump status updated'})
     except Exception as e:
         db_session.rollback()
@@ -377,7 +365,6 @@ def mark_maintenance_done():
         db_session.commit()
 
         print(f"Maintenance marked as done for {machine_id}: {maintenance_item}")
-        emit_machine_update(machine_id)
         return jsonify({'success': True, 'message': 'Maintenance marked as done'})
     except Exception as e:
         db_session.rollback()
@@ -439,7 +426,6 @@ def check_machine_timeout():
                     stop_dialysis_session_db(machine, current_time)
                 machine.status = 'stopped'
                 db_session.commit()
-                emit_machine_update(machine.machine_id)
         except Exception as e:
             db_session.rollback()
             print(f"Error in check_machine_timeout: {e}")
@@ -448,14 +434,11 @@ def check_machine_timeout():
             # Pastikan session ditutup (scoped_session akan handle)
             db_session.remove()
 
-
-
 # Mulai background threads
 timeout_thread = threading.Thread(target=check_machine_timeout, daemon=True)
 timeout_thread.start()
 
-
 # --- Main ---
 if __name__ == '__main__':
-    print("Starting Machine Monitoring Server with PostgreSQL...")
-    socketio.run(app, host='0.0.0.0', port=5000, allow_unsafe_werkzeug=True)
+    print("Starting Machine Monitoring Server with PostgreSQL (no SocketIO)...")
+    app.run(host='0.0.0.0', port=5000, debug=False)

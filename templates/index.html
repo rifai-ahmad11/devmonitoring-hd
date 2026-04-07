@@ -4,7 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Machine Monitoring Dashboard</title>
-    <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
     <style>
         * {
             margin: 0;
@@ -573,9 +572,9 @@
         </div>
     </div>
 
-    <!--<div class="refresh-btn" id="refreshButton">  
+    <div class="refresh-btn" id="refreshButton">  
         <span class="refresh-icon">↻</span> Refresh halaman untuk data terkini
-    </div>   -->
+    </div>  
 
     <div class="connection-status disconnected" id="connectionStatus">
         <span class="status-dot"></span>
@@ -615,10 +614,10 @@
 
     <script>
         // Inisialisasi SocketIO
-        const socket = io();
+        //const socket = io();
         const machinesGrid = document.getElementById('machinesGrid');
-        const connectionStatus = document.getElementById('connectionStatus');
-        const statusText = document.getElementById('statusText');
+        //const connectionStatus = document.getElementById('connectionStatus');
+        //const statusText = document.getElementById('statusText');
         
         // Modal elements
         const maintenanceModal = document.getElementById('maintenanceModal');
@@ -960,52 +959,6 @@
         }
 
         // Event: Koneksi berhasil
-        socket.on('connect', () => {
-            console.log('✓ Terhubung ke server');
-            connectionStatus.classList.remove('disconnected');
-            connectionStatus.classList.add('connected');
-            statusText.textContent = 'Terhubung';
-        });
-
-        // Event: Koneksi terputus
-        socket.on('disconnect', () => {
-            console.log('✗ Terputus dari server');
-            connectionStatus.classList.remove('connected');
-            connectionStatus.classList.add('disconnected');
-            statusText.textContent = 'Terputus';
-        });
-
-        // Event: Update machine
-        socket.on('machine_update', (data) => {
-            console.log('📊 Update machine:', data);
-            
-            const machineId = data.machine_id;
-            
-            // Jika machine belum ada, buat card baru
-            if (!machineCards[machineId]) {
-                machineCards[machineId] = true;
-                machineCount++;
-                
-                // Hapus empty state jika ada
-                const emptyState = machinesGrid.querySelector('.empty-state');
-                if (emptyState) {
-                    emptyState.remove();
-                }
-                
-                // Tambahkan card baru
-                const newCard = createMachineCard(machineId, data);
-                machinesGrid.appendChild(newCard);
-            } else {
-                // Update card yang sudah ada
-                updateMachineCard(machineId, data);
-            }
-        });
-
-        // Event: Machine dihapus (cleanup)
-        socket.on('machine_removed', (data) => {
-            console.log('🗑️ Machine dihapus:', data.machine_id);
-            removeMachineCard(data.machine_id);
-        });
 
         // Muat data awal dari server
         async function loadInitialData() {
