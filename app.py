@@ -62,10 +62,10 @@ class Maintenance(Base):
 Base.metadata.create_all(bind=engine)
 
 # Konfigurasi threshold
-MAINTENANCE_THRESHOLDS = {'filter_inlet': 5}
-MIN_DIALYSIS_DURATION = 60
-MIN_TREATMENT_DURATION = 60
-HEARTBEAT_TIMEOUT = 90
+MAINTENANCE_THRESHOLDS = {'filter_inlet': 200}  # completed dialysis
+MIN_DIALYSIS_DURATION = 3600  # detik 1 jam lebih singkat dibanding active
+MIN_TREATMENT_DURATION = 5440  # detik 1,5 jam
+HEARTBEAT_TIMEOUT = 390  # detik 6,5 menit baru mesin mati
 
 # --- Helper Functions ---
 def get_maintenance_name(item):
