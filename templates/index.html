@@ -4,7 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Machine Monitoring Dashboard</title>
-    <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
     <style>
         * {
             margin: 0;
@@ -275,7 +274,7 @@
         }
 
         /* Refresh button di pojok kiri atas */
-        /*.refresh-btn {
+        .refresh-btn {
             position: fixed;
             top: 20px;
             left: 20px;
@@ -304,7 +303,7 @@
         .refresh-icon {
             font-size: 1.2em;
             display: inline-block;
-        }*/
+        }
 
         .status-dot {
             width: 8px;
@@ -573,9 +572,9 @@
         </div>
     </div>
 
-    <!--<div class="refresh-btn" id="refreshButton">  
+    <div class="refresh-btn" id="refreshButton">  
         <span class="refresh-icon">↻</span> Refresh halaman untuk data terkini
-    </div>   -->
+    </div>  
 
     <div class="connection-status disconnected" id="connectionStatus">
         <span class="status-dot"></span>
@@ -616,7 +615,7 @@
     <script>
         // Inisialisasi SocketIO
         //const socket = io();
-        //const machinesGrid = document.getElementById('machinesGrid');
+        const machinesGrid = document.getElementById('machinesGrid');
         //const connectionStatus = document.getElementById('connectionStatus');
         //const statusText = document.getElementById('statusText');
         
