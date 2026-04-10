@@ -249,32 +249,9 @@
             opacity: 0.8;
         }
 
-        .connection-status {
-            position: fixed;
-            top: 20px;
-            right: 20px;
-            padding: 10px 15px;
-            border-radius: 20px;
-            font-size: 0.9em;
-            font-weight: bold;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
-        }
-
-        .connection-status.connected {
-            background-color: #4caf50;
-            color: white;
-        }
-
-        .connection-status.disconnected {
-            background-color: #f44336;
-            color: white;
-        }
 
         /* Refresh button di pojok kiri atas */
-        /*.refresh-btn {
+        .refresh-btn {
             position: fixed;
             top: 20px;
             left: 20px;
@@ -303,7 +280,7 @@
         .refresh-icon {
             font-size: 1.2em;
             display: inline-block;
-        }*/
+        }
 
         .status-dot {
             width: 8px;
@@ -360,10 +337,6 @@
             }
         }
 
-        .error-value {
-            color: #ff4757;
-            font-weight: bold;
-        }
 
         /* Modal Styles */
         .modal {
@@ -576,10 +549,6 @@
         <span class="refresh-icon">↻</span> Refresh halaman untuk data terkini
     </div>  
 
-    <div class="connection-status disconnected" id="connectionStatus">
-        <span class="status-dot"></span>
-        <span id="statusText">Terputus</span>
-    </div>
 
     <!-- Maintenance Modal -->
     <div id="maintenanceModal" class="modal">
@@ -754,9 +723,7 @@
             const maintenanceItems = data.maintenance_required || [];
             const maintenanceCount = data.maintenance_count || 0;
             
-            // Buat badge-badge
-            const errorCount = data.error_count || 0;
-            
+            // Buat badge-badge   
             
             const maintenanceBadgeHTML = maintenanceCount > 0 ? 
                 `<span class="maintenance-badge" data-machine-id="${machineId}">⚠️ ${maintenanceCount} Maintenance</span>` : '';
@@ -777,10 +744,6 @@
                     </div>
                 </div>
                 <div class="machine-info">
-                    <div class="info-row">
-                        <span class="info-label">Total Kegagalan Koneksi</span>
-                        <span class="info-value ${errorCount > 0 ? 'error-value' : ''}">${errorCount}</span>
-                    </div>
                     <div class="info-row">
                         <span class="info-label">Jumlah Maintenance Diperlukan</span>
                         <span class="info-value ${maintenanceCount > 0 ? 'error-value' : ''}">${maintenanceCount}</span>
@@ -857,8 +820,6 @@
             const maintenanceCount = data.maintenance_count || 0;
             
             // Buat badge-badge
-            const errorCount = data.error_count || 0;
-            
             const maintenanceBadgeHTML = maintenanceCount > 0 ? 
                 `<span class="maintenance-badge" data-machine-id="${machineId}">⚠️ ${maintenanceCount} Maintenance</span>` : '';
             
@@ -878,10 +839,6 @@
                     </div>
                 </div>
                 <div class="machine-info">
-                    <div class="info-row">
-                        <span class="info-label">Total Kegagalan Koneksi</span>
-                        <span class="info-value ${errorCount > 0 ? 'error-value' : ''}">${errorCount}</span>
-                    </div>
                     <div class="info-row">
                         <span class="info-label">Jumlah Maintenance Diperlukan</span>
                         <span class="info-value ${maintenanceCount > 0 ? 'error-value' : ''}">${maintenanceCount}</span>
