@@ -131,7 +131,6 @@ def get_machine_data_for_emit(machine: Machine):
         'current_session_duration': current_session_duration,
         'last_heartbeat': machine.last_heartbeat.isoformat() if machine.last_heartbeat else None,
         'completed_treatments': machine.completed_treatments,
-        'error_count': error_count,
         'maintenance_required': maintenance_required,
         'maintenance_count': len(maintenance_required),
         'pump_status': machine.pump_status,
