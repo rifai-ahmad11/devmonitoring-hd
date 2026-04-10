@@ -114,8 +114,6 @@ def stop_dialysis_session_db(machine: Machine, current_time: datetime):
 
 def get_machine_data_for_emit(machine: Machine):
     """Mengambil data machine untuk dikirim via socket."""
-    # Hitung error count (50 terbaru, karena itu yang disimpan)
-    error_count = db_session.query(Error).filter_by(machine_id=machine.machine_id).count()
     # maintenance_required dihitung ulang
     maintenance_required = calculate_required_maintenance(machine.machine_id)
     # Durasi sesi saat ini dihitung dari start time jika running
