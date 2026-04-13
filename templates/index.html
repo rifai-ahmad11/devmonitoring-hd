@@ -3,7 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Machine Monitoring Dashboard</title>
+    <title>HD Machine Monitoring Dashboard</title>
+    <!-- Font Awesome untuk ikon (opsional tapi direkomendasikan) -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     <style>
         * {
             margin: 0;
@@ -12,991 +14,828 @@
         }
 
         body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            min-height: 100vh;
-            padding: 20px;
+            font-family: 'Segoe UI', 'Roboto', system-ui, sans-serif;
+            background-color: #f5f9ff;
+            display: flex;
+            height: 100vh;
+            overflow: hidden;
         }
 
-        .dashboard-container {
-            max-width: 1400px;
-            margin: 0 auto;
+        /* ========== SIDEBAR ========== */
+        .sidebar {
+            width: 260px;
+            background-color: #ffffff;
+            border-right: 1px solid #e0eaf5;
+            display: flex;
+            flex-direction: column;
+            padding: 24px 16px;
+            box-shadow: 2px 0 12px rgba(0, 40, 80, 0.02);
+            overflow-y: auto;
         }
 
-        .header {
-            text-align: center;
+        .logo-area {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            margin-bottom: 32px;
+        }
+
+        .logo-icon {
+            width: 64px;
+            height: 64px;
+            background: linear-gradient(145deg, #4a90e2, #2b6cb0);
+            border-radius: 18px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
             color: white;
-            margin-bottom: 30px;
+            font-size: 32px;
+            margin-bottom: 16px;
+            box-shadow: 0 8px 16px rgba(74, 144, 226, 0.2);
         }
 
-        .header h1 {
-            font-size: 2.5em;
-            margin-bottom: 10px;
-            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+        .sidebar-title {
+            font-size: 18px;
+            font-weight: 700;
+            color: #1e3a6f;
+            text-align: center;
+            line-height: 1.4;
         }
 
-        .header p {
-            font-size: 1.1em;
-            opacity: 0.9;
+        .sidebar-subtitle {
+            font-size: 12px;
+            color: #7a8aa0;
+            margin-top: 6px;
+            text-align: center;
         }
 
+        .nav-menu {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            margin-top: 16px;
+        }
+
+        .nav-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 12px 16px;
+            border-radius: 12px;
+            color: #4a5c6c;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+            background-color: transparent;
+        }
+
+        .nav-item i {
+            width: 20px;
+            font-size: 1.2rem;
+            color: #6b85a0;
+        }
+
+        .nav-item.active {
+            background-color: #eef4ff;
+            color: #2b6cb0;
+        }
+
+        .nav-item.active i {
+            color: #2b6cb0;
+        }
+
+        .nav-item:hover:not(.active) {
+            background-color: #f8fafd;
+        }
+
+        /* ========== MAIN CONTENT ========== */
+        .main-content {
+            flex: 1;
+            overflow-y: auto;
+            padding: 24px 32px;
+            background-color: #f5f9ff;
+        }
+
+        /* Header area dalam main content */
+        .content-header {
+            display: flex;
+            align-items: center;
+            margin-bottom: 28px;
+        }
+
+        .content-header h1 {
+            font-size: 28px;
+            font-weight: 600;
+            color: #1e3a6f;
+            flex: 1;
+        }
+
+        .back-button {
+            background: none;
+            border: 1px solid #d0ddee;
+            background-color: white;
+            padding: 10px 18px;
+            border-radius: 30px;
+            font-size: 14px;
+            font-weight: 500;
+            color: #2b4f7b;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            transition: all 0.2s;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.02);
+        }
+
+        .back-button:hover {
+            background-color: #eef4ff;
+            border-color: #4a90e2;
+        }
+
+        /* Summary Cards */
+        .summary-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 20px;
+            margin-bottom: 32px;
+        }
+
+        .summary-card {
+            background: white;
+            border-radius: 18px;
+            padding: 20px 18px;
+            box-shadow: 0 8px 18px rgba(0, 20, 40, 0.04);
+            display: flex;
+            flex-direction: column;
+            border: 1px solid #eef2f9;
+            transition: transform 0.15s;
+        }
+
+        .summary-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 12px 24px rgba(74, 144, 226, 0.08);
+        }
+
+        .card-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 12px;
+        }
+
+        .card-header i {
+            font-size: 28px;
+            color: #4a90e2;
+            opacity: 0.7;
+        }
+
+        .card-label {
+            font-size: 14px;
+            font-weight: 500;
+            color: #5f738c;
+            text-transform: uppercase;
+            letter-spacing: 0.3px;
+        }
+
+        .card-value {
+            font-size: 38px;
+            font-weight: 700;
+            color: #1e3a6f;
+            line-height: 1.2;
+            margin-bottom: 8px;
+        }
+
+        .progress-wrapper {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-top: 6px;
+        }
+
+        .progress-bar-bg {
+            flex: 1;
+            height: 6px;
+            background-color: #e3eaf3;
+            border-radius: 10px;
+            overflow: hidden;
+        }
+
+        .progress-bar-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #4a90e2, #2b6cb0);
+            border-radius: 10px;
+            width: 0%;
+        }
+
+        .progress-percent {
+            font-size: 13px;
+            font-weight: 600;
+            color: #3a6ea5;
+            min-width: 40px;
+            text-align: right;
+        }
+
+        /* RS Grid (Home) */
+        .section-title {
+            font-size: 20px;
+            font-weight: 600;
+            color: #1e3a6f;
+            margin-bottom: 18px;
+        }
+
+        .rs-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+            gap: 20px;
+        }
+
+        .rs-card {
+            background: white;
+            border-radius: 16px;
+            padding: 22px 20px;
+            box-shadow: 0 8px 16px rgba(0, 20, 40, 0.03);
+            border: 1px solid #e8f0fe;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .rs-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 18px 30px rgba(74, 144, 226, 0.1);
+            border-color: #c2d9fc;
+        }
+
+        .rs-name {
+            font-size: 18px;
+            font-weight: 700;
+            color: #1e3a6f;
+            margin-bottom: 8px;
+            line-height: 1.3;
+        }
+
+        .rs-unit-count {
+            font-size: 14px;
+            color: #5f7d9c;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            margin-bottom: 16px;
+        }
+
+        .rs-stats-mini {
+            display: flex;
+            gap: 12px;
+            font-size: 13px;
+        }
+
+        .stat-dot {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+        }
+
+        .dot.green { background: #2ecc71; }
+        .dot.blue { background: #3498db; }
+        .dot.orange { background: #e67e22; }
+
+        /* Machine Cards (Detail View) */
         .machines-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
             gap: 20px;
-            animation: fadeIn 0.5s ease-in;
-        }
-
-        @keyframes fadeIn {
-            from {
-                opacity: 0;
-            }
-            to {
-                opacity: 1;
-            }
+            margin-top: 20px;
         }
 
         .machine-card {
             background: white;
-            border-radius: 12px;
-            padding: 20px;
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
-            transition: all 0.3s ease;
-            animation: slideIn 0.4s ease-out;
-        }
-
-        @keyframes slideIn {
-            from {
-                opacity: 0;
-                transform: translateY(20px);
-            }
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
+            border-radius: 16px;
+            padding: 18px 18px 14px;
+            box-shadow: 0 6px 14px rgba(0, 0, 0, 0.02);
+            border: 1px solid #e2ecfe;
+            transition: all 0.15s;
         }
 
         .machine-card:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 15px 40px rgba(0, 0, 0, 0.3);
-        }
-
-        .machine-card.removing {
-            animation: slideOut 0.4s ease-out forwards;
-        }
-
-        @keyframes slideOut {
-            from {
-                opacity: 1;
-                transform: translateY(0);
-            }
-            to {
-                opacity: 0;
-                transform: translateY(20px);
-            }
+            box-shadow: 0 12px 22px rgba(74, 144, 226, 0.08);
         }
 
         .machine-header {
             display: flex;
             justify-content: space-between;
-            align-items: center;
-            margin-bottom: 15px;
-            border-bottom: 2px solid #f0f0f0;
-            padding-bottom: 10px;
-            flex-wrap: wrap;
-            gap: 10px;
+            align-items: flex-start;
+            margin-bottom: 14px;
         }
 
-        .machine-id {
-            display: flex;
-            flex-direction: column;
-            line-height: 1.2;
-            flex: 1;
-        }
-        
-        .machine-id-main {
-            font-size: 1.3em;
-            font-weight: bold;
-            color: #333;
-        }
-        
-        .machine-id-rs {
-            font-size: 0.85em;
-            color: #666;
-            margin-top: 2px;
-        }
-        
-        .machine-id-sn {
-            font-size: 1em;
-            color: #2196f3;
-            font-family: monospace;
-            margin-top: 2px;
+        .machine-id-section {
+            line-height: 1.3;
         }
 
-        /* Tambahkan di bagian CSS */
-        .pump-status {
-            padding: 4px 8px;
-            border-radius: 4px;
-            font-weight: bold;
-            font-size: 0.85em;
+        .machine-main-id {
+            font-size: 18px;
+            font-weight: 700;
+            color: #1e3a6f;
         }
 
-        .pump-status.running {
-            background-color: #4caf50;
-            color: white;
+        .machine-sub {
+            font-size: 12px;
+            color: #6b85a0;
+            margin-top: 4px;
         }
 
-        .pump-status.stopped {
-            background-color: #f44336;
-            color: white;
-        }
-
-        /* Style untuk dialysis info */
-        .dialysis-info {
-            background-color: #e8f5e9;
-            border-left: 4px solid #4caf50;
-            padding: 8px;
-            border-radius: 4px;
+        .machine-sn {
+            font-family: 'SF Mono', 'Courier New', monospace;
+            font-size: 12px;
+            color: #4a6a8a;
+            background: #f0f6ff;
+            padding: 2px 8px;
+            border-radius: 30px;
+            display: inline-block;
             margin-top: 5px;
-        }
-
-        .header-badges {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            flex-wrap: wrap;
         }
 
         .status-badge {
             padding: 6px 12px;
-            border-radius: 20px;
-            font-size: 0.85em;
-            font-weight: bold;
+            border-radius: 30px;
+            font-size: 12px;
+            font-weight: 600;
             text-transform: uppercase;
-            letter-spacing: 0.5px;
+            letter-spacing: 0.3px;
         }
 
-        .status-badge.running {
-            background-color: #4caf50;
-            color: white;
-        }
+        .status-badge.hd-on { background: #2ecc71; color: white; }
+        .status-badge.idle { background: #b0c4de; color: #1e3a6f; }
+        .status-badge.treatment { background: #3498db; color: white; }
+        .status-badge.maintenance { background: #e67e22; color: white; }
 
-        .status-badge.stopped {
-            background-color: #f44336;
-            color: white;
-        }
-
-        .machine-info {
+        .machine-stats {
             display: flex;
             flex-direction: column;
-            gap: 12px;
+            gap: 10px;
+            margin: 12px 0 8px;
         }
 
-        .info-row {
+        .stat-row {
             display: flex;
-            justify-content: space-between;
             align-items: center;
-            padding: 8px 0;
-            border-bottom: 1px solid #f5f5f5;
+            justify-content: space-between;
         }
 
-        .info-row:last-child {
-            border-bottom: none;
+        .stat-label {
+            font-size: 13px;
+            color: #5f7d9c;
         }
 
-        .info-label {
-            color: #666;
-            font-size: 0.9em;
-            font-weight: 500;
+        .stat-value {
+            font-weight: 600;
+            color: #1e3a6f;
+            font-size: 15px;
         }
 
-        .info-value {
-            color: #333;
-            font-size: 1em;
-            font-weight: bold;
+        .progress-small {
+            width: 100%;
+            height: 5px;
+            background: #e3eaf3;
+            border-radius: 5px;
+            margin-top: 4px;
         }
 
-        .time-value {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            padding: 4px 8px;
-            border-radius: 4px;
-            font-family: 'Courier New', monospace;
+        .progress-fill {
+            height: 5px;
+            background: #4a90e2;
+            border-radius: 5px;
+            width: 0%;
         }
 
         .last-update {
-            font-size: 0.8em;
-            color: #999;
-            margin-top: 10px;
+            font-size: 10px;
+            color: #9aabbc;
             text-align: right;
-            font-style: italic;
+            margin-top: 8px;
         }
 
-        .empty-state {
-            grid-column: 1 / -1;
+        /* Empty state */
+        .empty-message {
             text-align: center;
-            padding: 60px 20px;
-            color: white;
+            padding: 40px;
+            color: #7a9cc6;
         }
 
-        .empty-state h2 {
-            font-size: 1.8em;
-            margin-bottom: 10px;
+        /* Responsive */
+        @media (max-width: 900px) {
+            .summary-grid { grid-template-columns: repeat(2, 1fr); }
         }
 
-        .empty-state p {
-            font-size: 1.1em;
-            opacity: 0.8;
-        }
-
-
-        /* Refresh button di pojok kiri atas */
-        .refresh-btn {
-            position: fixed;
-            top: 20px;
-            left: 20px;
-            background-color: rgba(255, 255, 255, 0.9);
-            color: #333;
-            padding: 8px 15px;
-            border-radius: 20px;
-            font-size: 0.7em;
-            font-weight: bold;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
-            cursor: pointer;
-            transition: all 0.3s ease;
-            z-index: 1000;
-            
-        }
-        
-        .refresh-btn:hover {
-            background-color: white;
-            transform: scale(1.02);
-            box-shadow: 0 6px 16px rgba(0, 0, 0, 0.3);
-        }
-        
-        .refresh-icon {
-            font-size: 1.2em;
-            display: inline-block;
-        }
-
-        .status-dot {
-            width: 8px;
-            height: 8px;
-            border-radius: 50%;
-            background-color: currentColor;
-            animation: pulse 2s infinite;
-        }
-
-        @keyframes pulse {
-            0%, 100% {
-                opacity: 1;
-            }
-            50% {
-                opacity: 0.5;
-            }
-        }
-
-
-
-        @keyframes blink {
-            0%, 50% {
-                opacity: 1;
-            }
-            51%, 100% {
-                opacity: 0.7;
-            }
-        }
-
-        /* Maintenance Badge */
-        .maintenance-badge {
-            background-color: #ffa502;
-            color: white;
-            padding: 6px 10px;
-            border-radius: 12px;
-            font-size: 0.75em;
-            font-weight: bold;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            animation: bounce 2s infinite;
-        }
-
-        .maintenance-badge:hover {
-            background-color: #ff9500;
-            transform: scale(1.05);
-        }
-
-        @keyframes bounce {
-            0%, 100% {
-                transform: translateY(0);
-            }
-            50% {
-                transform: translateY(-2px);
-            }
-        }
-
-        .error-value {
-            color: #ff4757;
-            font-weight: bold;
-        }
-
-        /* Modal Styles */
-        .modal {
-            display: none;
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background-color: rgba(0, 0, 0, 0.5);
-            z-index: 1000;
-            animation: fadeIn 0.3s ease;
-        }
-
-        .modal-content {
-            background-color: white;
-            margin: 5% auto;
-            padding: 30px;
-            border-radius: 12px;
-            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
-            width: 90%;
-            max-width: 500px;
-            animation: slideIn 0.4s ease-out;
-            position: relative;
-            max-height: 80vh;
-            overflow-y: auto;
-        }
-
-        .modal-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 25px;
-            border-bottom: 2px solid #f0f0f0;
-            padding-bottom: 15px;
-        }
-
-        .modal-title {
-            font-size: 1.5em;
-            font-weight: bold;
-            color: #333;
-        }
-
-        .close-button {
-            background: none;
-            border: none;
-            font-size: 1.8em;
-            cursor: pointer;
-            color: #666;
-            padding: 0;
-            width: 40px;
-            height: 40px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            border-radius: 50%;
-            transition: all 0.3s ease;
-        }
-
-        .close-button:hover {
-            background-color: #f0f0f0;
-            color: #333;
-        }
-
-        .machine-id-modal {
-            font-size: 1.1em;
-            font-weight: bold;
-            color: #667eea;
-            margin-bottom: 20px;
-            display: block;
-        }
-
-        .maintenance-list {
-            list-style: none;
-            padding: 0;
-            margin-top: 20px;
-        }
-
-        .maintenance-item {
-            background-color: #f8f9fa;
-            border-radius: 8px;
-            padding: 15px;
-            margin-bottom: 12px;
-            border-left: 4px solid #ffa502;
-            transition: all 0.3s ease;
-        }
-
-        .maintenance-item:hover {
-            background-color: #f0f7ff;
-            transform: translateX(5px);
-        }
-
-        .maintenance-item-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 8px;
-        }
-
-        .maintenance-item-title {
-            font-weight: bold;
-            color: #333;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
-
-        .maintenance-item-title::before {
-            content: "⚠️";
-        }
-
-        .maintenance-item-desc {
-            color: #666;
-            font-size: 0.9em;
-            line-height: 1.4;
-            margin-bottom: 8px;
-        }
-
-        .maintenance-item-details {
-            font-size: 0.85em;
-            color: #777;
-            background-color: #f0f0f0;
-            padding: 5px 8px;
-            border-radius: 4px;
-        }
-
-        .mark-done-btn {
-            background-color: #4caf50;
-            color: white;
-            border: none;
-            padding: 6px 12px;
-            border-radius: 4px;
-            font-size: 0.85em;
-            cursor: pointer;
-            transition: all 0.3s ease;
-        }
-
-        .mark-done-btn:hover {
-            background-color: #45a049;
-        }
-
-        .threshold-info {
-            background-color: #e8f4ff;
-            border-radius: 8px;
-            padding: 15px;
-            margin-top: 20px;
-            font-size: 0.9em;
-            color: #555;
-        }
-
-        .threshold-note {
-            color: #ff6b6b;
-            font-style: italic;
-            margin-top: 20px;
-            font-size: 0.85em;
-            padding: 10px;
-            background-color: #fff5f5;
-            border-radius: 6px;
-        }
-
-        @media (max-width: 768px) {
-            .machines-grid {
-                grid-template-columns: 1fr;
-            }
-
-            .header h1 {
-                font-size: 1.8em;
-            }
-
-            .connection-status {
-                top: 10px;
-                right: 10px;
-                font-size: 0.8em;
-            }
-
-            .modal-content {
-                margin: 10% auto;
-                width: 95%;
-                padding: 20px;
-            }
-
-            .maintenance-item-header {
-                flex-direction: column;
-                align-items: flex-start;
-                gap: 10px;
-            }
-
-            .mark-done-btn {
-                align-self: flex-start;
-            }
+        @media (max-width: 700px) {
+            body { flex-direction: column; }
+            .sidebar { width: 100%; border-right: none; border-bottom: 1px solid #e0eaf5; padding: 16px; }
+            .main-content { padding: 16px; }
+            .summary-grid { grid-template-columns: 1fr; }
+            .rs-grid { grid-template-columns: 1fr; }
         }
     </style>
 </head>
 <body>
-    <div class="dashboard-container">
-        <div class="header">
-            <h1>HD Machine Monitoring Dashboard</h1>
-            <p>Sistem monitoring real-time mesin hemodialisis</p>
-        </div>
-
-        <div class="machines-grid" id="machinesGrid">
-            <div class="empty-state">
-                <h2>⏳ Menunggu data mesin...</h2>
-                <p>Mesin akan muncul di sini ketika terhubung</p>
+    <!-- SIDEBAR -->
+    <div class="sidebar">
+        <div class="logo-area">
+            <div class="logo-icon">
+                <i class="fas fa-heartbeat"></i>
             </div>
+            <div class="sidebar-title">HD Machine Monitoring</div>
+            <div class="sidebar-subtitle">Real-time Monitoring System</div>
+        </div>
+        <div class="nav-menu">
+            <div class="nav-item active" id="navHome">
+                <i class="fas fa-chart-pie"></i>
+                <span>Ringkasan</span>
+            </div>
+            <!-- Menu tambahan bisa ditambahkan di sini -->
         </div>
     </div>
 
-    <div class="refresh-btn" id="refreshButton">  
-        <span class="refresh-icon">↻</span> Refresh halaman untuk data terkini
-    </div>  
-
-
-    <!-- Maintenance Modal -->
-    <div id="maintenanceModal" class="modal">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h2 class="modal-title">🛠️ Maintenance Required</h2>
-                <button class="close-button">&times;</button>
-            </div>
-            <div class="modal-body">
-                <span class="machine-id-modal">Serial Number: <span id="modalMachineId"></span></span>
-                
-                <p style="margin-bottom: 15px; color: #666;">
-                    Berikut adalah daftar komponen yang memerlukan perawatan:
-                </p>
-                
-                <ul class="maintenance-list" id="maintenanceList">
-                    <!-- Maintenance items will be inserted here -->
-                </ul>
-                
-                <div class="threshold-info">
-                    <strong>📋 Threshold Maintenance:</strong><br>
-                    Filter Endotoksin: Setiap 200 kali treatment
-                </div>
-                
-                <div class="threshold-note">
-                    *Note: Threshold ini merupakan estimasi. 
-                    Nilai sebenarnya dapat disesuaikan sesuai kebutuhan.
-                </div>
-            </div>
+    <!-- MAIN CONTENT -->
+    <div class="main-content" id="mainContent">
+        <!-- Akan diisi oleh JavaScript -->
+        <div class="content-header">
+            <h1 id="viewTitle">Ringkasan</h1>
+            <button class="back-button" id="backButton" style="display: none;">
+                <i class="fas fa-arrow-left"></i> Kembali
+            </button>
+        </div>
+        <div id="dynamicContent">
+            <!-- Tempat render view -->
+            <div class="empty-message">Memuat data...</div>
         </div>
     </div>
 
     <script>
-        // Inisialisasi SocketIO
-        //const socket = io();
-        const machinesGrid = document.getElementById('machinesGrid');
-        //const connectionStatus = document.getElementById('connectionStatus');
-        //const statusText = document.getElementById('statusText');
-        
-        // Modal elements
-        const maintenanceModal = document.getElementById('maintenanceModal');
-        const modalMachineId = document.getElementById('modalMachineId');
-        const maintenanceList = document.getElementById('maintenanceList');
-        const closeButton = maintenanceModal.querySelector('.close-button');
-        
-        // Menyimpan referensi ke machine cards
-        const machineCards = {};
-        let machineCount = 0;
-
-        // Format waktu ke format yang readable
-        function formatTime(seconds) {
-            const hours = Math.floor(seconds / 3600);
-            const minutes = Math.floor((seconds % 3600) / 60);
-            const secs = Math.floor(seconds % 60);
-            return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
-        }
-
-        // Format tanggal dan waktu
-        function formatDateTime(isoString) {
-            if (!isoString) return 'Belum ada update';
-            const date = new Date(isoString);
-            return date.toLocaleString('id-ID', {
-                year: 'numeric',
-                month: '2-digit',
-                day: '2-digit',
-                hour: '2-digit',
-                minute: '2-digit',
-                second: '2-digit'
-            });
-        }
-
-        //Parse id mesin
-        function parseMachineId(fullId) {
-            const parts = fullId.split('-');
-            return {
-                id: parts[0] || fullId,        // bagian pertama: HD_001
-                rs: parts[1] || '',             // bagian kedua: RS Harapan Kita_1
-                sn: parts[2] || ''               // bagian ketiga: XT054101
-            };
-        }
-        
-        // Fungsi untuk menampilkan modal maintenance
-        function showMaintenanceModal(machineId, maintenanceItems) {
-            const parsed = parseMachineId(machineId);
-            modalMachineId.textContent = parsed.sn;
-            maintenanceList.innerHTML = '';
+        (function(){
+            // ---------- STATE ----------
+            let currentView = 'home';          // 'home' atau 'detail'
+            let selectedRS = null;             // nama RS yang dipilih
+            let machinesData = {};             // data mentah dari API
             
-            maintenanceItems.forEach(item => {
-                const li = document.createElement('li');
-                li.className = 'maintenance-item';
-                li.innerHTML = `
-                    <div class="maintenance-item-header">
-                        <div class="maintenance-item-title">${item.name}</div>
-                        <button class="mark-done-btn" data-machine-id="${machineId}" data-item="${item.item}">
-                            ✓ Selesai
-                        </button>
-                    </div>
-                    <div class="maintenance-item-desc">${item.description}</div>
-                    <div class="maintenance-item-details">
-                        Threshold: Setiap ${item.threshold} treatment<br>
-                        Treatment sejak terakhir maintenance: ${item.treatments_since_last}
-                    </div>
-                `;
-                maintenanceList.appendChild(li);
-            });
-            
-            // Tambahkan event listeners untuk tombol "Mark as Done"
-            document.querySelectorAll('.mark-done-btn').forEach(btn => {
-                btn.addEventListener('click', function() {
-                    const machineId = this.dataset.machineId;
-                    const item = this.dataset.item;
-                    markMaintenanceDone(machineId, item);
+            // Elemen DOM
+            const viewTitle = document.getElementById('viewTitle');
+            const backButton = document.getElementById('backButton');
+            const dynamicContent = document.getElementById('dynamicContent');
+            const navHome = document.getElementById('navHome');
+
+            // ---------- HELPER FUNCTIONS ----------
+            function parseMachineId(fullId) {
+                const parts = fullId.split('-');
+                return {
+                    id: parts[0] || fullId,
+                    rs: parts[1] || '',
+                    sn: parts[2] || ''
+                };
+            }
+
+            // Format detik ke HH:MM:SS
+            function formatTime(seconds) {
+                const h = Math.floor(seconds / 3600);
+                const m = Math.floor((seconds % 3600) / 60);
+                const s = Math.floor(seconds % 60);
+                return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+            }
+
+            function formatDateTime(isoString) {
+                if (!isoString) return 'Belum update';
+                const d = new Date(isoString);
+                return d.toLocaleString('id-ID', { hour:'2-digit', minute:'2-digit', second:'2-digit' });
+            }
+
+            // Tentukan status utama mesin (prioritas: maintenance > treatment > hd_on > idle)
+            function getMainStatus(machine) {
+                if (machine.maintenance_count > 0) return 'maintenance';
+                if (machine.pump_status === 'running') return 'treatment';
+                if (machine.status === 'running') return 'hd-on';
+                return 'idle';
+            }
+
+            // ---------- GROUPING & STATISTIK ----------
+            function computeGlobalStats(machines) {
+                const stats = {
+                    total: 0,
+                    hdOn: 0,
+                    treatment: 0,
+                    maintenance: 0
+                };
+                Object.values(machines).forEach(m => {
+                    stats.total++;
+                    if (m.status === 'running') stats.hdOn++;
+                    if (m.pump_status === 'running') stats.treatment++;
+                    if (m.maintenance_count > 0) stats.maintenance++;
                 });
-            });
-            
-            maintenanceModal.style.display = 'block';
-        }
+                return stats;
+            }
 
-        // Fungsi untuk mengirim request ke server saat maintenance dilakukan
-        async function markMaintenanceDone(machineId, item) {
-            try {
-                const response = await fetch('/maintenance-done', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({
-                        machine_id: machineId,
-                        maintenance_item: item
-                    })
+            function groupByRS(machines) {
+                const groups = {};
+                Object.entries(machines).forEach(([machineId, data]) => {
+                    const parsed = parseMachineId(machineId);
+                    const rsName = parsed.rs || 'Tanpa RS';
+                    if (!groups[rsName]) {
+                        groups[rsName] = {
+                            machines: [],
+                            total: 0,
+                            hdOn: 0,
+                            treatment: 0,
+                            maintenance: 0
+                        };
+                    }
+                    groups[rsName].machines.push({ machineId, data, parsed });
+                    groups[rsName].total++;
+                    if (data.status === 'running') groups[rsName].hdOn++;
+                    if (data.pump_status === 'running') groups[rsName].treatment++;
+                    if (data.maintenance_count > 0) groups[rsName].maintenance++;
                 });
+                return groups;
+            }
+
+            // ---------- RENDER VIEWS ----------
+            function renderHome() {
+                viewTitle.textContent = 'Ringkasan';
+                backButton.style.display = 'none';
                 
-                const result = await response.json();
-                if (result.success) {
-                    alert(`Maintenance ${item} telah ditandai selesai`);
-                    maintenanceModal.style.display = 'none';
+                const machines = machinesData;
+                const stats = computeGlobalStats(machines);
+                const groups = groupByRS(machines);
+                const rsList = Object.keys(groups).sort();
+
+                // Hitung persentase untuk progress
+                const percentHd = stats.total ? (stats.hdOn / stats.total * 100) : 0;
+                const percentTreatment = stats.total ? (stats.treatment / stats.total * 100) : 0;
+                const percentMaintenance = stats.total ? (stats.maintenance / stats.total * 100) : 0;
+
+                let html = `
+                    <!-- Summary Cards Global -->
+                    <div class="summary-grid">
+                        <div class="summary-card">
+                            <div class="card-header">
+                                <span class="card-label">Total Mesin</span>
+                                <i class="fas fa-server"></i>
+                            </div>
+                            <div class="card-value">${stats.total}</div>
+                            <div class="progress-wrapper">
+                                <div class="progress-bar-bg"><div class="progress-bar-fill" style="width:100%"></div></div>
+                                <span class="progress-percent">100%</span>
+                            </div>
+                        </div>
+                        <div class="summary-card">
+                            <div class="card-header">
+                                <span class="card-label">HD ON</span>
+                                <i class="fas fa-play-circle"></i>
+                            </div>
+                            <div class="card-value">${stats.hdOn}</div>
+                            <div class="progress-wrapper">
+                                <div class="progress-bar-bg"><div class="progress-bar-fill" style="width:${percentHd}%"></div></div>
+                                <span class="progress-percent">${percentHd.toFixed(0)}%</span>
+                            </div>
+                        </div>
+                        <div class="summary-card">
+                            <div class="card-header">
+                                <span class="card-label">IN TREATMENT</span>
+                                <i class="fas fa-syringe"></i>
+                            </div>
+                            <div class="card-value">${stats.treatment}</div>
+                            <div class="progress-wrapper">
+                                <div class="progress-bar-bg"><div class="progress-bar-fill" style="width:${percentTreatment}%"></div></div>
+                                <span class="progress-percent">${percentTreatment.toFixed(0)}%</span>
+                            </div>
+                        </div>
+                        <div class="summary-card">
+                            <div class="card-header">
+                                <span class="card-label">NEED MAINTENANCE</span>
+                                <i class="fas fa-tools"></i>
+                            </div>
+                            <div class="card-value">${stats.maintenance}</div>
+                            <div class="progress-wrapper">
+                                <div class="progress-bar-bg"><div class="progress-bar-fill" style="width:${percentMaintenance}%"></div></div>
+                                <span class="progress-percent">${percentMaintenance.toFixed(0)}%</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="section-title">Daftar Rumah Sakit / Klinik</div>
+                    <div class="rs-grid">
+                `;
+
+                if (rsList.length === 0) {
+                    html += `<div class="empty-message">Belum ada data mesin.</div>`;
                 } else {
-                    alert(`Error: ${result.error}`);
-                }
-            } catch (error) {
-                console.error('Error marking maintenance done:', error);
-                alert('Gagal menandai maintenance sebagai selesai');
-            }
-        }
-
-        // Event listener untuk menutup modal
-        closeButton.addEventListener('click', () => {
-            maintenanceModal.style.display = 'none';
-        });
-
-        // Tutup modal jika klik di luar modal
-        window.addEventListener('click', (event) => {
-            if (event.target === maintenanceModal) {
-                maintenanceModal.style.display = 'none';
-            }
-        });
-
-        // Update fungsi createMachineCard dan updateMachineCard:
-
-        function createMachineCard(machineId, data) {
-            const card = document.createElement('div');
-            card.className = 'machine-card';
-            card.id = `machine-${machineId}`;
-            
-            const statusClass = data.status === 'running' ? 'running' : 'stopped';
-            const statusText = data.status === 'running' ? '▶ HD ON' : '⏹ HD OFF';
-            
-            const pumpStatusClass = data.pump_status === 'running' ? 'running' : 'stopped';
-            const pumpStatusText = data.pump_status === 'running' ? 'TREATMENT' : 'IDLE';
-            
-            // Gunakan data dari server untuk maintenance
-            const maintenanceItems = data.maintenance_required || [];
-            const maintenanceCount = data.maintenance_count || 0;
-            
-            // Buat badge-badge   
-            
-            const maintenanceBadgeHTML = maintenanceCount > 0 ? 
-                `<span class="maintenance-badge" data-machine-id="${machineId}">⚠️ ${maintenanceCount} Maintenance</span>` : '';
-          
-            const parsed = parseMachineId(machineId);
-
-            card.innerHTML = `
-                <div class="machine-header">
-                    <div class="machine-id">
-                        <div class="machine-id-main">${parsed.id}</div>
-                        <div class="machine-id-rs">${parsed.rs}</div>
-                        <div class="machine-id-sn">${parsed.sn}</div>
-                    </div>
-                    <div class="header-badges">
-                        ${maintenanceBadgeHTML}
-                        <div class="status-badge ${statusClass}">${statusText}</div>
-                        <div class="status-badge ${pumpStatusClass}" style="background-color: #2196f3;">${pumpStatusText}</div>
-                    </div>
-                </div>
-                <div class="machine-info">
-                    <div class="info-row">
-                        <span class="info-label">Jumlah Maintenance Diperlukan</span>
-                        <span class="info-value ${maintenanceCount > 0 ? 'error-value' : ''}">${maintenanceCount}</span>
-                    </div>
-                    
-                    <!-- Sesi Treatment -->
-                    <div class="info-row" style="margin-top: 10px; padding-top: 10px; border-top: 1px dashed #ddd;">
-                        <span class="info-label">Waktu Aktif</span>
-                        <div style="display: flex; flex-direction: column; align-items: flex-end;">
-                            <span class="info-value time-value">${formatTime(data.current_session_duration || 0)}</span>
-                            <small style="font-size: 0.8em; color: #666;">Durasi Sesi</small>
-                        </div>
-                    </div>
-                    <div class="info-row">
-                        <span class="info-label">Total Waktu Aktif</span>
-                        <span class="info-value time-value">${formatTime(data.total_active_time || 0)}</span>
-                    </div>
-                    <div class="info-row">
-                        <span class="info-label">Jumlah Sesi Aktif Selesai</span>
-                        <span class="info-value">${data.completed_treatments || 0}</span>
-                    </div>
-                    
-                    <!-- Sesi Dialysis -->
-                    <div class="info-row" style="margin-top: 10px; padding-top: 10px; border-top: 1px dashed #ddd;">
-                        <span class="info-label">Waktu Treatment</span>
-                        <div style="display: flex; flex-direction: column; align-items: flex-end;">
-                            <span class="info-value time-value" style="background: linear-gradient(135deg, #2196f3 0%, #1976d2 100%);">
-                                ${formatTime(data.current_dialysis_duration || 0)}
-                            </span>
-                            <small style="font-size: 0.8em; color: #666;">Durasi Sesi</small>
-                        </div>
-                    </div>
-                    <div class="info-row">
-                        <span class="info-label">Total Waktu Treatment</span>
-                        <span class="info-value time-value" style="background: linear-gradient(135deg, #2196f3 0%, #1976d2 100%);">
-                            ${formatTime(data.total_dialysis_time || 0)}
-                        </span>
-                    </div>
-                    <div class="info-row">
-                        <span class="info-label">Jumlah Treatment Selesai</span>
-                        <span class="info-value">${data.completed_dialysis || 0}</span>
-                    </div>
-                    
-                    <div class="last-update">
-                        Terakhir update: ${formatDateTime(data.last_update)}
-                    </div>
-                </div>
-            `;
-            
-            // Tambahkan event listener untuk maintenance badge
-            const maintenanceBadgeElement = card.querySelector('.maintenance-badge');
-            if (maintenanceBadgeElement) {
-                maintenanceBadgeElement.addEventListener('click', () => {
-                    showMaintenanceModal(machineId, maintenanceItems);
-                });
-            }
-            
-            return card;
-        }
-
-        // Update fungsi updateMachineCard dengan struktur yang sama
-        function updateMachineCard(machineId, data) {
-            const card = document.getElementById(`machine-${machineId}`);
-            if (!card) return;
-
-            const statusClass = data.status === 'running' ? 'running' : 'stopped';
-            const statusText = data.status === 'running' ? '▶ HD ON' : '⏹ HD OFF';
-            
-            const pumpStatusClass = data.pump_status === 'running' ? 'running' : 'stopped';
-            const pumpStatusText = data.pump_status === 'running' ? 'TREATMENT' : 'IDLE';
-            
-            // Gunakan data dari server untuk maintenance
-            const maintenanceItems = data.maintenance_required || [];
-            const maintenanceCount = data.maintenance_count || 0;
-            
-            // Buat badge-badge
-            const maintenanceBadgeHTML = maintenanceCount > 0 ? 
-                `<span class="maintenance-badge" data-machine-id="${machineId}">⚠️ ${maintenanceCount} Maintenance</span>` : '';
-            
-            const parsed = parseMachineId(machineId);
-            
-            card.innerHTML = `
-                <div class="machine-header">
-                    <div class="machine-id">
-                        <div class="machine-id-main">${parsed.id}</div>
-                        <div class="machine-id-rs">${parsed.rs}</div>
-                        <div class="machine-id-sn">${parsed.sn}</div>
-                    </div>
-                    <div class="header-badges">
-                        ${maintenanceBadgeHTML}
-                        <div class="status-badge ${statusClass}">${statusText}</div>
-                        <div class="status-badge ${pumpStatusClass}" style="background-color: #2196f3;">${pumpStatusText}</div>
-                    </div>
-                </div>
-                <div class="machine-info">
-                    <div class="info-row">
-                        <span class="info-label">Jumlah Maintenance Diperlukan</span>
-                        <span class="info-value ${maintenanceCount > 0 ? 'error-value' : ''}">${maintenanceCount}</span>
-                    </div>
-                    
-                    <!-- Sesi Treatment -->
-                    <div class="info-row" style="margin-top: 10px; padding-top: 10px; border-top: 1px dashed #ddd;">
-                        <span class="info-label">Waktu Aktif</span>
-                        <div style="display: flex; flex-direction: column; align-items: flex-end;">
-                            <span class="info-value time-value">${formatTime(data.current_session_duration || 0)}</span>
-                            <small style="font-size: 0.8em; color: #666;">Durasi Sesi</small>
-                        </div>
-                    </div>
-                    <div class="info-row">
-                        <span class="info-label">Total Waktu Aktif</span>
-                        <span class="info-value time-value">${formatTime(data.total_active_time || 0)}</span>
-                    </div>
-                    <div class="info-row">
-                        <span class="info-label">Jumlah Sesi Aktif Selesai</span>
-                        <span class="info-value">${data.completed_treatments || 0}</span>
-                    </div>
-                    
-                    <!-- Sesi Dialysis -->
-                    <div class="info-row" style="margin-top: 10px; padding-top: 10px; border-top: 1px dashed #ddd;">
-                        <span class="info-label">Waktu Treatment</span>
-                        <div style="display: flex; flex-direction: column; align-items: flex-end;">
-                            <span class="info-value time-value" style="background: linear-gradient(135deg, #2196f3 0%, #1976d2 100%);">
-                                ${formatTime(data.current_dialysis_duration || 0)}
-                            </span>
-                            <small style="font-size: 0.8em; color: #666;">Durasi Sesi</small>
-                        </div>
-                    </div>
-                    <div class="info-row">
-                        <span class="info-label">Total Waktu Treatment</span>
-                        <span class="info-value time-value" style="background: linear-gradient(135deg, #2196f3 0%, #1976d2 100%);">
-                            ${formatTime(data.total_dialysis_time || 0)}
-                        </span>
-                    </div>
-                    <div class="info-row">
-                        <span class="info-label">Jumlah Treatment Selesai</span>
-                        <span class="info-value">${data.completed_dialysis || 0}</span>
-                    </div>
-            `;
-            
-            // Tambahkan event listener untuk maintenance badge
-            const maintenanceBadgeElement = card.querySelector('.maintenance-badge');
-            if (maintenanceBadgeElement) {
-                maintenanceBadgeElement.addEventListener('click', () => {
-                    showMaintenanceModal(machineId, maintenanceItems);
-                });
-            }
-        }
-
-        // Menghapus card machine
-        function removeMachineCard(machineId) {
-            const card = document.getElementById(`machine-${machineId}`);
-            if (card) {
-                card.classList.add('removing');
-                setTimeout(() => {
-                    card.remove();
-                    delete machineCards[machineId];
-                    machineCount--;
-                    
-                    // Tampilkan empty state jika tidak ada machine
-                    if (machineCount === 0) {
-                        machinesGrid.innerHTML = `
-                            <div class="empty-state">
-                                <h2>⏳ Menunggu data mesin...</h2>
-                                <p>Mesin akan muncul di sini ketika terhubung</p>
+                    rsList.forEach(rsName => {
+                        const g = groups[rsName];
+                        html += `
+                            <div class="rs-card" data-rs="${rsName}">
+                                <div class="rs-name">${rsName}</div>
+                                <div class="rs-unit-count"><i class="fas fa-microchip"></i> ${g.total} unit</div>
+                                <div class="rs-stats-mini">
+                                    <span class="stat-dot"><span class="dot green"></span> ${g.hdOn}</span>
+                                    <span class="stat-dot"><span class="dot blue"></span> ${g.treatment}</span>
+                                    <span class="stat-dot"><span class="dot orange"></span> ${g.maintenance}</span>
+                                </div>
                             </div>
                         `;
-                    }
-                }, 400);
-            }
-        }
-
-        // Event: Koneksi berhasil
-
-        // Muat data awal dari server
-        async function loadInitialData() {
-            try {
-                const response = await fetch('/api/machines');
-                const machines = await response.json();
-                
-                console.log('📥 Data awal dimuat:', machines);
-                
-                // Tampilkan semua machine yang ada
-                for (const [machineId, data] of Object.entries(machines)) {
-                    if (!machineCards[machineId]) {
-                        machineCards[machineId] = true;
-                        machineCount++;
-                        
-                        // Hapus empty state
-                        const emptyState = machinesGrid.querySelector('.empty-state');
-                        if (emptyState) {
-                            emptyState.remove();
-                        }
-                        
-                        // Tambahkan card
-                        const newCard = createMachineCard(machineId, data);
-                        machinesGrid.appendChild(newCard);
-                    }
+                    });
                 }
-            } catch (error) {
-                console.error('❌ Error memuat data awal:', error);
+                html += `</div>`;
+                dynamicContent.innerHTML = html;
+
+                // Tambahkan event listener ke RS card
+                document.querySelectorAll('.rs-card').forEach(card => {
+                    card.addEventListener('click', (e) => {
+                        const rs = card.dataset.rs;
+                        if (rs) {
+                            selectedRS = rs;
+                            currentView = 'detail';
+                            renderDetail(rs);
+                        }
+                    });
+                });
             }
-        }
 
-        // Panggil saat halaman dimuat
-        window.addEventListener('load', loadInitialData);
+            function renderDetail(rsName) {
+                viewTitle.textContent = rsName;
+                backButton.style.display = 'flex';
+                
+                const groups = groupByRS(machinesData);
+                const rsGroup = groups[rsName] || { machines: [], total:0, hdOn:0, treatment:0, maintenance:0 };
+                const machines = rsGroup.machines;
+                const stats = {
+                    total: rsGroup.total,
+                    hdOn: rsGroup.hdOn,
+                    treatment: rsGroup.treatment,
+                    maintenance: rsGroup.maintenance
+                };
 
-        // Tombol refresh halaman
-        const refreshButton = document.getElementById('refreshButton');
-        if (refreshButton) {
-            refreshButton.addEventListener('click', () => {
-                window.location.reload();
-            });
-        }
+                const percentHd = stats.total ? (stats.hdOn / stats.total * 100) : 0;
+                const percentTreatment = stats.total ? (stats.treatment / stats.total * 100) : 0;
+                const percentMaintenance = stats.total ? (stats.maintenance / stats.total * 100) : 0;
 
-        // Update setInterval untuk handle dialysis time juga
-        setInterval(() => {
-            for (const machineId of Object.keys(machineCards)) {
-                const card = document.getElementById(`machine-${machineId}`);
-                if (card) {
-                    const timeValueElements = card.querySelectorAll('.time-value');
-                    const statusBadge = card.querySelector('.status-badge');
-                    const pumpStatusBadge = card.querySelector('.status-badge[style*="background-color: #2196f3"]');
+                let html = `
+                    <!-- Summary Cards RS -->
+                    <div class="summary-grid">
+                        <div class="summary-card">
+                            <div class="card-header"><span class="card-label">Total Mesin</span><i class="fas fa-server"></i></div>
+                            <div class="card-value">${stats.total}</div>
+                            <div class="progress-wrapper"><div class="progress-bar-bg"><div class="progress-bar-fill" style="width:100%"></div></div><span class="progress-percent">100%</span></div>
+                        </div>
+                        <div class="summary-card">
+                            <div class="card-header"><span class="card-label">HD ON</span><i class="fas fa-play-circle"></i></div>
+                            <div class="card-value">${stats.hdOn}</div>
+                            <div class="progress-wrapper"><div class="progress-bar-bg"><div class="progress-bar-fill" style="width:${percentHd}%"></div></div><span class="progress-percent">${percentHd.toFixed(0)}%</span></div>
+                        </div>
+                        <div class="summary-card">
+                            <div class="card-header"><span class="card-label">IN TREATMENT</span><i class="fas fa-syringe"></i></div>
+                            <div class="card-value">${stats.treatment}</div>
+                            <div class="progress-wrapper"><div class="progress-bar-bg"><div class="progress-bar-fill" style="width:${percentTreatment}%"></div></div><span class="progress-percent">${percentTreatment.toFixed(0)}%</span></div>
+                        </div>
+                        <div class="summary-card">
+                            <div class="card-header"><span class="card-label">NEED MAINTENANCE</span><i class="fas fa-tools"></i></div>
+                            <div class="card-value">${stats.maintenance}</div>
+                            <div class="progress-wrapper"><div class="progress-bar-bg"><div class="progress-bar-fill" style="width:${percentMaintenance}%"></div></div><span class="progress-percent">${percentMaintenance.toFixed(0)}%</span></div>
+                        </div>
+                    </div>
                     
-                    // Update treatment time jika mesin running
-                    if (statusBadge && statusBadge.classList.contains('running')) {
-                        const treatmentTimeElement = timeValueElements[0]; // First time-value is treatment
-                        if (treatmentTimeElement) {
-                            const currentTimeStr = treatmentTimeElement.textContent;
-                            const [hours, minutes, seconds] = currentTimeStr.split(':').map(Number);
-                            let totalSeconds = hours * 3600 + minutes * 60 + seconds + 1;
-                            treatmentTimeElement.textContent = formatTime(totalSeconds);
+                    <div class="section-title">Rincian Mesin</div>
+                    <div class="machines-grid">
+                `;
+
+                if (machines.length === 0) {
+                    html += `<div class="empty-message">Tidak ada mesin di RS ini.</div>`;
+                } else {
+                    machines.sort((a,b) => a.machineId.localeCompare(b.machineId));
+                    machines.forEach(({ machineId, data, parsed }) => {
+                        const mainStatus = getMainStatus(data);
+                        let statusText = '';
+                        let statusClass = '';
+                        switch(mainStatus) {
+                            case 'hd-on': statusText = 'HD ON'; statusClass = 'hd-on'; break;
+                            case 'treatment': statusText = 'IN TREATMENT'; statusClass = 'treatment'; break;
+                            case 'maintenance': statusText = 'NEED MAINTENANCE'; statusClass = 'maintenance'; break;
+                            default: statusText = 'IDLE'; statusClass = 'idle';
                         }
-                    }
+                        
+                        // Durasi
+                        const activeDuration = formatTime(data.current_session_duration || 0);
+                        const totalActive = formatTime(data.total_active_time || 0);
+                        const dialysisDuration = formatTime(data.current_dialysis_duration || 0);
+                        const totalDialysis = formatTime(data.total_dialysis_time || 0);
+                        
+                        // Progress sederhana (treatment progress vs waktu typical?)
+                        // Gunakan threshold 5440 detik untuk treatment selesai (dari data)
+                        const treatmentProgress = data.status === 'running' ? Math.min((data.current_session_duration / 5440) * 100, 100) : 0;
+                        
+                        html += `
+                            <div class="machine-card">
+                                <div class="machine-header">
+                                    <div class="machine-id-section">
+                                        <div class="machine-main-id">${parsed.id}</div>
+                                        <div class="machine-sub">${parsed.rs || 'Tanpa RS'}</div>
+                                        <span class="machine-sn">SN: ${parsed.sn || 'N/A'}</span>
+                                    </div>
+                                    <div class="status-badge ${statusClass}">${statusText}</div>
+                                </div>
+                                <div class="machine-stats">
+                                    <div class="stat-row">
+                                        <span class="stat-label">Waktu Aktif</span>
+                                        <span class="stat-value">${activeDuration}</span>
+                                    </div>
+                                    <div class="progress-small"><div class="progress-fill" style="width:${treatmentProgress}%"></div></div>
+                                    <div class="stat-row">
+                                        <span class="stat-label">Total Aktif</span>
+                                        <span class="stat-value">${totalActive}</span>
+                                    </div>
+                                    <div class="stat-row">
+                                        <span class="stat-label">Treatment</span>
+                                        <span class="stat-value">${dialysisDuration}</span>
+                                    </div>
+                                    <div class="stat-row">
+                                        <span class="stat-label">Total Treatment</span>
+                                        <span class="stat-value">${totalDialysis}</span>
+                                    </div>
+                                    <div class="stat-row">
+                                        <span class="stat-label">Sesi Selesai</span>
+                                        <span class="stat-value">${data.completed_treatments || 0} / ${data.completed_dialysis || 0}</span>
+                                    </div>
+                                </div>
+                                <div class="last-update">Update: ${formatDateTime(data.last_update)}</div>
+                            </div>
+                        `;
+                    });
+                }
+                html += `</div>`;
+                dynamicContent.innerHTML = html;
+            }
+
+            // ---------- FETCH DATA & INIT ----------
+            async function loadData() {
+                try {
+                    const response = await fetch('/api/machines');
+                    if (!response.ok) throw new Error('Gagal memuat data');
+                    machinesData = await response.json();
                     
-                    // Update dialysis time jika pump running
-                    if (pumpStatusBadge && pumpStatusBadge.textContent.includes('TREATMENT')) {
-                        // Find dialysis time element (it's the third time-value with blue background)
-                        const dialysisTimeElements = card.querySelectorAll('.time-value[style*="background: linear-gradient(135deg, #2196f3"]');
-                        if (dialysisTimeElements.length > 0) {
-                            const dialysisTimeElement = dialysisTimeElements[0]; // Current dialysis session
-                            const currentTimeStr = dialysisTimeElement.textContent;
-                            const [hours, minutes, seconds] = currentTimeStr.split(':').map(Number);
-                            let totalSeconds = hours * 3600 + minutes * 60 + seconds + 1;
-                            dialysisTimeElement.textContent = formatTime(totalSeconds);
-                        }
+                    // Render sesuai currentView
+                    if (currentView === 'home') {
+                        renderHome();
+                    } else if (currentView === 'detail' && selectedRS) {
+                        renderDetail(selectedRS);
+                    } else {
+                        // fallback
+                        currentView = 'home';
+                        renderHome();
                     }
+                } catch (err) {
+                    console.error(err);
+                    dynamicContent.innerHTML = `<div class="empty-message">Gagal memuat data. Periksa koneksi.</div>`;
                 }
             }
-        }, 1000);
+
+            // Navigasi
+            function goHome() {
+                currentView = 'home';
+                selectedRS = null;
+                renderHome();
+                navHome.classList.add('active');
+            }
+
+            function goBack() {
+                if (currentView === 'detail') {
+                    currentView = 'home';
+                    selectedRS = null;
+                    renderHome();
+                    navHome.classList.add('active');
+                }
+            }
+
+            // Event Listeners
+            navHome.addEventListener('click', goHome);
+            backButton.addEventListener('click', goBack);
+
+            // Refresh manual (bisa ditambahkan tombol jika mau)
+            // Saat ini, cukup load awal dan tidak auto refresh (opsional setInterval)
+            // Inisialisasi
+            loadData();
+
+            // Optional: polling setiap 30 detik untuk update data
+            setInterval(() => {
+                loadData();
+            }, 30000); // 30 detik
+
+            // Timer lokal untuk increment waktu (opsional, hanya visual)
+            setInterval(() => {
+                // Cukup render ulang view saat ini agar timer berjalan
+                if (currentView === 'home') renderHome();
+                else if (currentView === 'detail' && selectedRS) renderDetail(selectedRS);
+            }, 1000);
+        })();
     </script>
 </body>
 </html>
