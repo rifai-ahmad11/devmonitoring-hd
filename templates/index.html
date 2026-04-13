@@ -618,10 +618,25 @@
             // ---------- HELPERS ----------
             function parseMachineId(fullId) {
                 const parts = fullId.split('-');
+                const rawId = parts[0] || fullId;
+                const rawRs = parts[1] || '';
+                const rawSn = parts[2] || '';
+            
+                // Coba pisahkan nama RS dan unit jika ada pola "_angka" di akhir
+                const match = rawRs.match(/^(.+)_(\d+)$/);
+                let rsBase = rawRs;
+                let unit = '';
+                if (match) {
+                    rsBase = match[1];   // "RS Daerah"
+                    unit = match[2];     // "2"
+                }
+            
                 return {
-                    id: parts[0] || fullId,
-                    rs: parts[1] || '',
-                    sn: parts[2] || ''
+                    id: rawId,
+                    rsRaw: rawRs,
+                    rsBase: rsBase,
+                    unit: unit,
+                    sn: rawSn
                 };
             }
 
@@ -647,13 +662,22 @@
             function groupByRS(data) {
                 const groups = {};
                 Object.entries(data).forEach(([id, m]) => {
-                    const rs = parseMachineId(id).rs || 'Tanpa RS';
-                    if (!groups[rs]) groups[rs] = { machines: [], total:0, hdOn:0, treatment:0, maintenance:0 };
-                    groups[rs].machines.push({ machineId: id, data: m, parsed: parseMachineId(id) });
-                    groups[rs].total++;
-                    if (m.status === 'running') groups[rs].hdOn++;
-                    if (m.pump_status === 'running') groups[rs].treatment++;
-                    if (m.maintenance_count > 0) groups[rs].maintenance++;
+                    const parsed = parseMachineId(id);
+                    const rsKey = parsed.rsBase || 'Tanpa RS';
+                    if (!groups[rsKey]) {
+                        groups[rsKey] = {
+                            machines: [],
+                            total: 0,
+                            hdOn: 0,
+                            treatment: 0,
+                            maintenance: 0
+                        };
+                    }
+                    groups[rsKey].machines.push({ machineId: id, data: m, parsed: parsed });
+                    groups[rsKey].total++;
+                    if (m.status === 'running') groups[rsKey].hdOn++;
+                    if (m.pump_status === 'running') groups[rsKey].treatment++;
+                    if (m.maintenance_count > 0) groups[rsKey].maintenance++;
                 });
                 return groups;
             }
@@ -813,7 +837,8 @@
                 const pctHd = stats.total ? (stats.hdOn/stats.total*100) : 0;
                 const pctTreat = stats.total ? (stats.treatment/stats.total*100) : 0;
                 const pctMaint = stats.total ? (stats.maintenance/stats.total*100) : 0;
-
+                const unitText = parsed.unit ? ` • Unit ${parsed.unit}` : '';
+                
                 let html = `
                     <div class="summary-grid">
                         <div class="summary-card"><div class="card-header"><span class="card-label">Total Mesin</span><i class="fas fa-server"></i></div><div class="card-value">${stats.total}</div><div class="donut-container"><div class="donut-chart" style="background: conic-gradient(#4a90e2 360deg, #e0e7ff 0deg);"><div class="donut-inner"></div></div><span class="donut-label">100%</span></div></div>
@@ -841,7 +866,7 @@
                                 <div class="machine-header">
                                     <div class="machine-id-section">
                                         <div class="machine-main-id">${parsed.id}</div>
-                                        <div class="machine-sub">${parsed.rs || ''}</div>
+                                        <div class="machine-sub">${parsed.rsBase || 'Tanpa RS'}${unitText}</div>
                                         <div class="machine-sn">SN: ${parsed.sn || ''}</div>
                                     </div>
                                     <div class="header-badges">
