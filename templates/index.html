@@ -837,7 +837,7 @@
                 const pctHd = stats.total ? (stats.hdOn/stats.total*100) : 0;
                 const pctTreat = stats.total ? (stats.treatment/stats.total*100) : 0;
                 const pctMaint = stats.total ? (stats.maintenance/stats.total*100) : 0;
-                const unitText = parsed.unit ? ` • Unit ${parsed.unit}` : '';
+                
                 
                 let html = `
                     <div class="summary-grid">
@@ -860,6 +860,7 @@
                         else if (mainStatus === 'maintenance') { statusClass = 'maintenance'; statusText = 'MAINTENANCE'; }
                         
                         const maintenanceBadge = data.maintenance_count > 0 ? `<span class="maintenance-badge" data-machine="${machineId}">⚠️ ${data.maintenance_count}</span>` : '';
+                        const unitText = parsed.unit ? ` • Unit ${parsed.unit}` : '';
                         
                         html += `
                             <div class="machine-card" data-machine-id="${machineId}">
