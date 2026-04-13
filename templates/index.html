@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>HD Machine Monitoring Dashboard</title>
-    <!-- Font Awesome untuk ikon (opsional tapi direkomendasikan) -->
+    <!-- Font Awesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     <style>
         * {
@@ -14,23 +14,24 @@
         }
 
         body {
-            font-family: 'Segoe UI', 'Roboto', system-ui, sans-serif;
-            background-color: #f5f9ff;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
             display: flex;
-            height: 100vh;
-            overflow: hidden;
+            color: #1e1e2f;
         }
 
         /* ========== SIDEBAR ========== */
         .sidebar {
             width: 260px;
-            background-color: #ffffff;
-            border-right: 1px solid #e0eaf5;
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(8px);
+            border-right: 1px solid rgba(255, 255, 255, 0.2);
             display: flex;
             flex-direction: column;
             padding: 24px 16px;
-            box-shadow: 2px 0 12px rgba(0, 40, 80, 0.02);
-            overflow-y: auto;
+            box-shadow: 4px 0 20px rgba(0, 0, 0, 0.1);
+            color: #1e3a6f;
         }
 
         .logo-area {
@@ -51,7 +52,7 @@
             color: white;
             font-size: 32px;
             margin-bottom: 16px;
-            box-shadow: 0 8px 16px rgba(74, 144, 226, 0.2);
+            box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2);
         }
 
         .sidebar-title {
@@ -64,7 +65,7 @@
 
         .sidebar-subtitle {
             font-size: 12px;
-            color: #7a8aa0;
+            color: #5f7d9c;
             margin-top: 6px;
             text-align: center;
         }
@@ -82,7 +83,7 @@
             gap: 12px;
             padding: 12px 16px;
             border-radius: 12px;
-            color: #4a5c6c;
+            color: #2c3e50;
             font-weight: 500;
             cursor: pointer;
             transition: all 0.2s;
@@ -92,7 +93,7 @@
         .nav-item i {
             width: 20px;
             font-size: 1.2rem;
-            color: #6b85a0;
+            color: #4a6a8a;
         }
 
         .nav-item.active {
@@ -105,7 +106,7 @@
         }
 
         .nav-item:hover:not(.active) {
-            background-color: #f8fafd;
+            background-color: rgba(255, 255, 255, 0.5);
         }
 
         /* ========== MAIN CONTENT ========== */
@@ -113,43 +114,53 @@
             flex: 1;
             overflow-y: auto;
             padding: 24px 32px;
-            background-color: #f5f9ff;
+            color: white;
         }
 
-        /* Header area dalam main content */
+        /* Header area */
         .content-header {
             display: flex;
             align-items: center;
             margin-bottom: 28px;
+            flex-wrap: wrap;
         }
 
         .content-header h1 {
             font-size: 28px;
             font-weight: 600;
-            color: #1e3a6f;
+            color: white;
+            text-shadow: 2px 2px 6px rgba(0,0,0,0.2);
             flex: 1;
         }
 
-        .back-button {
-            background: none;
-            border: 1px solid #d0ddee;
-            background-color: white;
+        .header-actions {
+            display: flex;
+            gap: 12px;
+        }
+
+        .back-button, .refresh-button {
+            background: rgba(255, 255, 255, 0.2);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            color: white;
             padding: 10px 18px;
             border-radius: 30px;
             font-size: 14px;
             font-weight: 500;
-            color: #2b4f7b;
             cursor: pointer;
             display: flex;
             align-items: center;
             gap: 8px;
             transition: all 0.2s;
-            box-shadow: 0 2px 6px rgba(0,0,0,0.02);
+            backdrop-filter: blur(4px);
         }
 
-        .back-button:hover {
-            background-color: #eef4ff;
-            border-color: #4a90e2;
+        .back-button:hover, .refresh-button:hover {
+            background: rgba(255, 255, 255, 0.4);
+            border-color: rgba(255, 255, 255, 0.6);
+        }
+
+        .refresh-button i {
+            font-size: 16px;
         }
 
         /* Summary Cards */
@@ -164,16 +175,16 @@
             background: white;
             border-radius: 18px;
             padding: 20px 18px;
-            box-shadow: 0 8px 18px rgba(0, 20, 40, 0.04);
+            box-shadow: 0 12px 24px rgba(0, 0, 0, 0.15);
             display: flex;
             flex-direction: column;
-            border: 1px solid #eef2f9;
             transition: transform 0.15s;
+            border: none;
         }
 
         .summary-card:hover {
             transform: translateY(-2px);
-            box-shadow: 0 12px 24px rgba(74, 144, 226, 0.08);
+            box-shadow: 0 18px 30px rgba(0, 0, 0, 0.2);
         }
 
         .card-header {
@@ -186,12 +197,12 @@
         .card-header i {
             font-size: 28px;
             color: #4a90e2;
-            opacity: 0.7;
+            opacity: 0.8;
         }
 
         .card-label {
             font-size: 14px;
-            font-weight: 500;
+            font-weight: 600;
             color: #5f738c;
             text-transform: uppercase;
             letter-spacing: 0.3px;
@@ -235,11 +246,12 @@
             text-align: right;
         }
 
-        /* RS Grid (Home) */
+        /* RS Grid */
         .section-title {
-            font-size: 20px;
+            font-size: 22px;
             font-weight: 600;
-            color: #1e3a6f;
+            color: white;
+            text-shadow: 1px 1px 4px rgba(0,0,0,0.2);
             margin-bottom: 18px;
         }
 
@@ -253,16 +265,15 @@
             background: white;
             border-radius: 16px;
             padding: 22px 20px;
-            box-shadow: 0 8px 16px rgba(0, 20, 40, 0.03);
-            border: 1px solid #e8f0fe;
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.1);
             cursor: pointer;
             transition: all 0.2s;
         }
 
         .rs-card:hover {
             transform: translateY(-4px);
-            box-shadow: 0 18px 30px rgba(74, 144, 226, 0.1);
-            border-color: #c2d9fc;
+            box-shadow: 0 18px 30px rgba(0, 0, 0, 0.2);
+            background: #fafbff;
         }
 
         .rs-name {
@@ -270,7 +281,6 @@
             font-weight: 700;
             color: #1e3a6f;
             margin-bottom: 8px;
-            line-height: 1.3;
         }
 
         .rs-unit-count {
@@ -292,6 +302,7 @@
             display: flex;
             align-items: center;
             gap: 4px;
+            color: #2c3e50;
         }
 
         .dot {
@@ -304,7 +315,7 @@
         .dot.blue { background: #3498db; }
         .dot.orange { background: #e67e22; }
 
-        /* Machine Cards (Detail View) */
+        /* Machine Cards (Detail) */
         .machines-grid {
             display: grid;
             grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
@@ -316,13 +327,13 @@
             background: white;
             border-radius: 16px;
             padding: 18px 18px 14px;
-            box-shadow: 0 6px 14px rgba(0, 0, 0, 0.02);
-            border: 1px solid #e2ecfe;
-            transition: all 0.15s;
+            box-shadow: 0 12px 24px rgba(0, 0, 0, 0.15);
+            transition: all 0.2s;
         }
 
         .machine-card:hover {
-            box-shadow: 0 12px 22px rgba(74, 144, 226, 0.08);
+            box-shadow: 0 18px 30px rgba(0, 0, 0, 0.2);
+            transform: translateY(-3px);
         }
 
         .machine-header {
@@ -389,12 +400,32 @@
         .stat-label {
             font-size: 13px;
             color: #5f7d9c;
+            font-weight: 500;
         }
 
         .stat-value {
-            font-weight: 600;
+            font-weight: 700;
             color: #1e3a6f;
             font-size: 15px;
+        }
+
+        /* Warna time-value seperti sebelumnya */
+        .time-value {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 4px 8px;
+            border-radius: 6px;
+            font-family: 'Courier New', monospace;
+            font-weight: 600;
+        }
+
+        .dialysis-time-value {
+            background: linear-gradient(135deg, #2196f3 0%, #1976d2 100%);
+            color: white;
+            padding: 4px 8px;
+            border-radius: 6px;
+            font-family: 'Courier New', monospace;
+            font-weight: 600;
         }
 
         .progress-small {
@@ -419,11 +450,11 @@
             margin-top: 8px;
         }
 
-        /* Empty state */
         .empty-message {
             text-align: center;
             padding: 40px;
-            color: #7a9cc6;
+            color: rgba(255,255,255,0.9);
+            font-size: 18px;
         }
 
         /* Responsive */
@@ -433,11 +464,13 @@
 
         @media (max-width: 700px) {
             body { flex-direction: column; }
-            .sidebar { width: 100%; border-right: none; border-bottom: 1px solid #e0eaf5; padding: 16px; }
+            .sidebar { width: 100%; border-right: none; border-bottom: 1px solid rgba(255,255,255,0.2); }
             .main-content { padding: 16px; }
             .summary-grid { grid-template-columns: 1fr; }
-            .rs-grid { grid-template-columns: 1fr; }
         }
+
+        /* Sembunyikan tombol back saat home */
+        .back-button.hidden { display: none; }
     </style>
 </head>
 <body>
@@ -455,21 +488,24 @@
                 <i class="fas fa-chart-pie"></i>
                 <span>Ringkasan</span>
             </div>
-            <!-- Menu tambahan bisa ditambahkan di sini -->
+            <!-- Tambahan menu lain bisa di sini -->
         </div>
     </div>
 
     <!-- MAIN CONTENT -->
     <div class="main-content" id="mainContent">
-        <!-- Akan diisi oleh JavaScript -->
         <div class="content-header">
             <h1 id="viewTitle">Ringkasan</h1>
-            <button class="back-button" id="backButton" style="display: none;">
-                <i class="fas fa-arrow-left"></i> Kembali
-            </button>
+            <div class="header-actions">
+                <button class="back-button hidden" id="backButton">
+                    <i class="fas fa-arrow-left"></i> Kembali
+                </button>
+                <button class="refresh-button" id="refreshButton">
+                    <i class="fas fa-sync-alt"></i> Refresh
+                </button>
+            </div>
         </div>
         <div id="dynamicContent">
-            <!-- Tempat render view -->
             <div class="empty-message">Memuat data...</div>
         </div>
     </div>
@@ -478,7 +514,7 @@
         (function(){
             // ---------- STATE ----------
             let currentView = 'home';          // 'home' atau 'detail'
-            let selectedRS = null;             // nama RS yang dipilih
+            let selectedRS = null;
             let machinesData = {};             // data mentah dari API
             
             // Elemen DOM
@@ -486,8 +522,9 @@
             const backButton = document.getElementById('backButton');
             const dynamicContent = document.getElementById('dynamicContent');
             const navHome = document.getElementById('navHome');
+            const refreshBtn = document.getElementById('refreshButton');
 
-            // ---------- HELPER FUNCTIONS ----------
+            // ---------- HELPER ----------
             function parseMachineId(fullId) {
                 const parts = fullId.split('-');
                 return {
@@ -497,7 +534,6 @@
                 };
             }
 
-            // Format detik ke HH:MM:SS
             function formatTime(seconds) {
                 const h = Math.floor(seconds / 3600);
                 const m = Math.floor((seconds % 3600) / 60);
@@ -508,10 +544,9 @@
             function formatDateTime(isoString) {
                 if (!isoString) return 'Belum update';
                 const d = new Date(isoString);
-                return d.toLocaleString('id-ID', { hour:'2-digit', minute:'2-digit', second:'2-digit' });
+                return d.toLocaleTimeString('id-ID', { hour:'2-digit', minute:'2-digit', second:'2-digit' });
             }
 
-            // Tentukan status utama mesin (prioritas: maintenance > treatment > hd_on > idle)
             function getMainStatus(machine) {
                 if (machine.maintenance_count > 0) return 'maintenance';
                 if (machine.pump_status === 'running') return 'treatment';
@@ -519,23 +554,7 @@
                 return 'idle';
             }
 
-            // ---------- GROUPING & STATISTIK ----------
-            function computeGlobalStats(machines) {
-                const stats = {
-                    total: 0,
-                    hdOn: 0,
-                    treatment: 0,
-                    maintenance: 0
-                };
-                Object.values(machines).forEach(m => {
-                    stats.total++;
-                    if (m.status === 'running') stats.hdOn++;
-                    if (m.pump_status === 'running') stats.treatment++;
-                    if (m.maintenance_count > 0) stats.maintenance++;
-                });
-                return stats;
-            }
-
+            // ---------- GROUPING ----------
             function groupByRS(machines) {
                 const groups = {};
                 Object.entries(machines).forEach(([machineId, data]) => {
@@ -559,70 +578,53 @@
                 return groups;
             }
 
-            // ---------- RENDER VIEWS ----------
+            function computeGlobalStats(machines) {
+                const stats = { total:0, hdOn:0, treatment:0, maintenance:0 };
+                Object.values(machines).forEach(m => {
+                    stats.total++;
+                    if (m.status === 'running') stats.hdOn++;
+                    if (m.pump_status === 'running') stats.treatment++;
+                    if (m.maintenance_count > 0) stats.maintenance++;
+                });
+                return stats;
+            }
+
+            // ---------- RENDER ----------
             function renderHome() {
                 viewTitle.textContent = 'Ringkasan';
-                backButton.style.display = 'none';
+                backButton.classList.add('hidden');
                 
-                const machines = machinesData;
-                const stats = computeGlobalStats(machines);
-                const groups = groupByRS(machines);
+                const stats = computeGlobalStats(machinesData);
+                const groups = groupByRS(machinesData);
                 const rsList = Object.keys(groups).sort();
 
-                // Hitung persentase untuk progress
                 const percentHd = stats.total ? (stats.hdOn / stats.total * 100) : 0;
                 const percentTreatment = stats.total ? (stats.treatment / stats.total * 100) : 0;
                 const percentMaintenance = stats.total ? (stats.maintenance / stats.total * 100) : 0;
 
                 let html = `
-                    <!-- Summary Cards Global -->
                     <div class="summary-grid">
                         <div class="summary-card">
-                            <div class="card-header">
-                                <span class="card-label">Total Mesin</span>
-                                <i class="fas fa-server"></i>
-                            </div>
+                            <div class="card-header"><span class="card-label">Total Mesin</span><i class="fas fa-server"></i></div>
                             <div class="card-value">${stats.total}</div>
-                            <div class="progress-wrapper">
-                                <div class="progress-bar-bg"><div class="progress-bar-fill" style="width:100%"></div></div>
-                                <span class="progress-percent">100%</span>
-                            </div>
+                            <div class="progress-wrapper"><div class="progress-bar-bg"><div class="progress-bar-fill" style="width:100%"></div></div><span class="progress-percent">100%</span></div>
                         </div>
                         <div class="summary-card">
-                            <div class="card-header">
-                                <span class="card-label">HD ON</span>
-                                <i class="fas fa-play-circle"></i>
-                            </div>
+                            <div class="card-header"><span class="card-label">HD ON</span><i class="fas fa-play-circle"></i></div>
                             <div class="card-value">${stats.hdOn}</div>
-                            <div class="progress-wrapper">
-                                <div class="progress-bar-bg"><div class="progress-bar-fill" style="width:${percentHd}%"></div></div>
-                                <span class="progress-percent">${percentHd.toFixed(0)}%</span>
-                            </div>
+                            <div class="progress-wrapper"><div class="progress-bar-bg"><div class="progress-bar-fill" style="width:${percentHd}%"></div></div><span class="progress-percent">${percentHd.toFixed(0)}%</span></div>
                         </div>
                         <div class="summary-card">
-                            <div class="card-header">
-                                <span class="card-label">IN TREATMENT</span>
-                                <i class="fas fa-syringe"></i>
-                            </div>
+                            <div class="card-header"><span class="card-label">IN TREATMENT</span><i class="fas fa-syringe"></i></div>
                             <div class="card-value">${stats.treatment}</div>
-                            <div class="progress-wrapper">
-                                <div class="progress-bar-bg"><div class="progress-bar-fill" style="width:${percentTreatment}%"></div></div>
-                                <span class="progress-percent">${percentTreatment.toFixed(0)}%</span>
-                            </div>
+                            <div class="progress-wrapper"><div class="progress-bar-bg"><div class="progress-bar-fill" style="width:${percentTreatment}%"></div></div><span class="progress-percent">${percentTreatment.toFixed(0)}%</span></div>
                         </div>
                         <div class="summary-card">
-                            <div class="card-header">
-                                <span class="card-label">NEED MAINTENANCE</span>
-                                <i class="fas fa-tools"></i>
-                            </div>
+                            <div class="card-header"><span class="card-label">NEED MAINTENANCE</span><i class="fas fa-tools"></i></div>
                             <div class="card-value">${stats.maintenance}</div>
-                            <div class="progress-wrapper">
-                                <div class="progress-bar-bg"><div class="progress-bar-fill" style="width:${percentMaintenance}%"></div></div>
-                                <span class="progress-percent">${percentMaintenance.toFixed(0)}%</span>
-                            </div>
+                            <div class="progress-wrapper"><div class="progress-bar-bg"><div class="progress-bar-fill" style="width:${percentMaintenance}%"></div></div><span class="progress-percent">${percentMaintenance.toFixed(0)}%</span></div>
                         </div>
                     </div>
-                    
                     <div class="section-title">Daftar Rumah Sakit / Klinik</div>
                     <div class="rs-grid">
                 `;
@@ -648,9 +650,8 @@
                 html += `</div>`;
                 dynamicContent.innerHTML = html;
 
-                // Tambahkan event listener ke RS card
                 document.querySelectorAll('.rs-card').forEach(card => {
-                    card.addEventListener('click', (e) => {
+                    card.addEventListener('click', () => {
                         const rs = card.dataset.rs;
                         if (rs) {
                             selectedRS = rs;
@@ -663,7 +664,7 @@
 
             function renderDetail(rsName) {
                 viewTitle.textContent = rsName;
-                backButton.style.display = 'flex';
+                backButton.classList.remove('hidden');
                 
                 const groups = groupByRS(machinesData);
                 const rsGroup = groups[rsName] || { machines: [], total:0, hdOn:0, treatment:0, maintenance:0 };
@@ -680,32 +681,14 @@
                 const percentMaintenance = stats.total ? (stats.maintenance / stats.total * 100) : 0;
 
                 let html = `
-                    <!-- Summary Cards RS -->
                     <div class="summary-grid">
-                        <div class="summary-card">
-                            <div class="card-header"><span class="card-label">Total Mesin</span><i class="fas fa-server"></i></div>
-                            <div class="card-value">${stats.total}</div>
-                            <div class="progress-wrapper"><div class="progress-bar-bg"><div class="progress-bar-fill" style="width:100%"></div></div><span class="progress-percent">100%</span></div>
-                        </div>
-                        <div class="summary-card">
-                            <div class="card-header"><span class="card-label">HD ON</span><i class="fas fa-play-circle"></i></div>
-                            <div class="card-value">${stats.hdOn}</div>
-                            <div class="progress-wrapper"><div class="progress-bar-bg"><div class="progress-bar-fill" style="width:${percentHd}%"></div></div><span class="progress-percent">${percentHd.toFixed(0)}%</span></div>
-                        </div>
-                        <div class="summary-card">
-                            <div class="card-header"><span class="card-label">IN TREATMENT</span><i class="fas fa-syringe"></i></div>
-                            <div class="card-value">${stats.treatment}</div>
-                            <div class="progress-wrapper"><div class="progress-bar-bg"><div class="progress-bar-fill" style="width:${percentTreatment}%"></div></div><span class="progress-percent">${percentTreatment.toFixed(0)}%</span></div>
-                        </div>
-                        <div class="summary-card">
-                            <div class="card-header"><span class="card-label">NEED MAINTENANCE</span><i class="fas fa-tools"></i></div>
-                            <div class="card-value">${stats.maintenance}</div>
-                            <div class="progress-wrapper"><div class="progress-bar-bg"><div class="progress-bar-fill" style="width:${percentMaintenance}%"></div></div><span class="progress-percent">${percentMaintenance.toFixed(0)}%</span></div>
-                        </div>
+                        <div class="summary-card"><div class="card-header"><span class="card-label">Total Mesin</span><i class="fas fa-server"></i></div><div class="card-value">${stats.total}</div><div class="progress-wrapper"><div class="progress-bar-bg"><div class="progress-bar-fill" style="width:100%"></div></div><span class="progress-percent">100%</span></div></div>
+                        <div class="summary-card"><div class="card-header"><span class="card-label">HD ON</span><i class="fas fa-play-circle"></i></div><div class="card-value">${stats.hdOn}</div><div class="progress-wrapper"><div class="progress-bar-bg"><div class="progress-bar-fill" style="width:${percentHd}%"></div></div><span class="progress-percent">${percentHd.toFixed(0)}%</span></div></div>
+                        <div class="summary-card"><div class="card-header"><span class="card-label">IN TREATMENT</span><i class="fas fa-syringe"></i></div><div class="card-value">${stats.treatment}</div><div class="progress-wrapper"><div class="progress-bar-bg"><div class="progress-bar-fill" style="width:${percentTreatment}%"></div></div><span class="progress-percent">${percentTreatment.toFixed(0)}%</span></div></div>
+                        <div class="summary-card"><div class="card-header"><span class="card-label">NEED MAINTENANCE</span><i class="fas fa-tools"></i></div><div class="card-value">${stats.maintenance}</div><div class="progress-wrapper"><div class="progress-bar-bg"><div class="progress-bar-fill" style="width:${percentMaintenance}%"></div></div><span class="progress-percent">${percentMaintenance.toFixed(0)}%</span></div></div>
                     </div>
-                    
                     <div class="section-title">Rincian Mesin</div>
-                    <div class="machines-grid">
+                    <div class="machines-grid" id="machinesGridContainer">
                 `;
 
                 if (machines.length === 0) {
@@ -714,8 +697,7 @@
                     machines.sort((a,b) => a.machineId.localeCompare(b.machineId));
                     machines.forEach(({ machineId, data, parsed }) => {
                         const mainStatus = getMainStatus(data);
-                        let statusText = '';
-                        let statusClass = '';
+                        let statusText = '', statusClass = '';
                         switch(mainStatus) {
                             case 'hd-on': statusText = 'HD ON'; statusClass = 'hd-on'; break;
                             case 'treatment': statusText = 'IN TREATMENT'; statusClass = 'treatment'; break;
@@ -723,18 +705,14 @@
                             default: statusText = 'IDLE'; statusClass = 'idle';
                         }
                         
-                        // Durasi
                         const activeDuration = formatTime(data.current_session_duration || 0);
                         const totalActive = formatTime(data.total_active_time || 0);
                         const dialysisDuration = formatTime(data.current_dialysis_duration || 0);
                         const totalDialysis = formatTime(data.total_dialysis_time || 0);
-                        
-                        // Progress sederhana (treatment progress vs waktu typical?)
-                        // Gunakan threshold 5440 detik untuk treatment selesai (dari data)
                         const treatmentProgress = data.status === 'running' ? Math.min((data.current_session_duration / 5440) * 100, 100) : 0;
                         
                         html += `
-                            <div class="machine-card">
+                            <div class="machine-card" data-machine-id="${machineId}">
                                 <div class="machine-header">
                                     <div class="machine-id-section">
                                         <div class="machine-main-id">${parsed.id}</div>
@@ -746,20 +724,20 @@
                                 <div class="machine-stats">
                                     <div class="stat-row">
                                         <span class="stat-label">Waktu Aktif</span>
-                                        <span class="stat-value">${activeDuration}</span>
+                                        <span class="stat-value time-value" data-field="active">${activeDuration}</span>
                                     </div>
                                     <div class="progress-small"><div class="progress-fill" style="width:${treatmentProgress}%"></div></div>
                                     <div class="stat-row">
                                         <span class="stat-label">Total Aktif</span>
-                                        <span class="stat-value">${totalActive}</span>
+                                        <span class="stat-value" data-field="totalActive">${totalActive}</span>
                                     </div>
                                     <div class="stat-row">
                                         <span class="stat-label">Treatment</span>
-                                        <span class="stat-value">${dialysisDuration}</span>
+                                        <span class="stat-value dialysis-time-value" data-field="dialysis">${dialysisDuration}</span>
                                     </div>
                                     <div class="stat-row">
                                         <span class="stat-label">Total Treatment</span>
-                                        <span class="stat-value">${totalDialysis}</span>
+                                        <span class="stat-value" data-field="totalDialysis">${totalDialysis}</span>
                                     </div>
                                     <div class="stat-row">
                                         <span class="stat-label">Sesi Selesai</span>
@@ -775,20 +753,74 @@
                 dynamicContent.innerHTML = html;
             }
 
-            // ---------- FETCH DATA & INIT ----------
+            // ---------- TIMER REAL-TIME (mempertahankan mekanisme lama) ----------
+            function updateTimers() {
+                if (!machinesData) return;
+                
+                // Hanya proses jika di detail view (ada grid mesin)
+                const grid = document.getElementById('machinesGridContainer');
+                if (!grid) return;
+                
+                const cards = grid.querySelectorAll('.machine-card');
+                cards.forEach(card => {
+                    const machineId = card.dataset.machineId;
+                    const machine = machinesData[machineId];
+                    if (!machine) return;
+                    
+                    const status = machine.status;
+                    const pumpStatus = machine.pump_status;
+                    
+                    // Update active duration (treatment time) jika status running
+                    if (status === 'running') {
+                        const activeElem = card.querySelector('[data-field="active"]');
+                        if (activeElem) {
+                            let currentSeconds = machine.current_session_duration || 0;
+                            currentSeconds += 1;
+                            machine.current_session_duration = currentSeconds; // update di state lokal
+                            activeElem.textContent = formatTime(currentSeconds);
+                        }
+                        // Update progress bar (optional)
+                        const progressFill = card.querySelector('.progress-fill');
+                        if (progressFill) {
+                            const progress = Math.min((machine.current_session_duration / 5440) * 100, 100);
+                            progressFill.style.width = progress + '%';
+                        }
+                    }
+                    
+                    // Update dialysis duration jika pump running
+                    if (pumpStatus === 'running') {
+                        const dialysisElem = card.querySelector('[data-field="dialysis"]');
+                        if (dialysisElem) {
+                            let currentDialysis = machine.current_dialysis_duration || 0;
+                            currentDialysis += 1;
+                            machine.current_dialysis_duration = currentDialysis;
+                            dialysisElem.textContent = formatTime(currentDialysis);
+                        }
+                    }
+                    
+                    // Update total values tidak berubah karena hanya dihitung saat sesi selesai di server
+                    // Update last update time setiap detik? Bisa juga, tapi opsional.
+                });
+            }
+
+            // ---------- FETCH DATA ----------
             async function loadData() {
                 try {
                     const response = await fetch('/api/machines');
                     if (!response.ok) throw new Error('Gagal memuat data');
-                    machinesData = await response.json();
+                    const freshData = await response.json();
                     
-                    // Render sesuai currentView
+                    // Merge dengan data lokal yang mungkin sudah bertambah durasinya via timer
+                    // Agar timer tetap sinkron, kita gabungkan: pertahankan current_session_duration jika mesin running?
+                    // Untuk amannya, kita timpa dengan data server, tapi timer akan menambah sendiri.
+                    machinesData = freshData;
+                    
+                    // Render ulang view saat ini
                     if (currentView === 'home') {
                         renderHome();
                     } else if (currentView === 'detail' && selectedRS) {
                         renderDetail(selectedRS);
                     } else {
-                        // fallback
                         currentView = 'home';
                         renderHome();
                     }
@@ -798,7 +830,6 @@
                 }
             }
 
-            // Navigasi
             function goHome() {
                 currentView = 'home';
                 selectedRS = null;
@@ -808,33 +839,25 @@
 
             function goBack() {
                 if (currentView === 'detail') {
-                    currentView = 'home';
-                    selectedRS = null;
-                    renderHome();
-                    navHome.classList.add('active');
+                    goHome();
                 }
             }
 
             // Event Listeners
             navHome.addEventListener('click', goHome);
             backButton.addEventListener('click', goBack);
+            refreshBtn.addEventListener('click', () => {
+                loadData();
+            });
 
-            // Refresh manual (bisa ditambahkan tombol jika mau)
-            // Saat ini, cukup load awal dan tidak auto refresh (opsional setInterval)
             // Inisialisasi
             loadData();
 
-            // Optional: polling setiap 30 detik untuk update data
-            setInterval(() => {
-                loadData();
-            }, 30000); // 30 detik
-
-            // Timer lokal untuk increment waktu (opsional, hanya visual)
-            setInterval(() => {
-                // Cukup render ulang view saat ini agar timer berjalan
-                if (currentView === 'home') renderHome();
-                else if (currentView === 'detail' && selectedRS) renderDetail(selectedRS);
-            }, 1000);
+            // Interval untuk update timer setiap detik (real-time)
+            setInterval(updateTimers, 1000);
+            
+            // Polling data setiap 30 detik untuk sinkronisasi
+            setInterval(loadData, 30000);
         })();
     </script>
 </body>
