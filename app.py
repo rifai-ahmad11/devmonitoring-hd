@@ -173,14 +173,14 @@ def logout():
     return redirect(url_for('login'))
 
 # --- API Endpoints ---
+
 @app.route('/api/machines')
 def get_machines():
-    """Mengembalikan data semua machine dalam bentuk JSON."""
+    start = time.time()
     try:
-        machines = db_session.query(Machine).all()
-        result = {}
-        for machine in machines:
-            result[machine.machine_id] = get_machine_data_for_emit(machine)
+        result = get_all_machines_data()
+        elapsed = time.time() - start
+        print(f"⏱️ /api/machines: {elapsed:.3f} detik, {len(result)} mesin")
         return jsonify(result)
     except Exception as e:
         print(f"Error in /api/machines: {e}")
