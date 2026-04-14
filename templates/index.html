@@ -544,14 +544,14 @@
             </div>
         </div>
 
-        <!-- HOME VIEW (Ringkasan) -->
+        <!-- HOME VIEW -->
         <div id="homeView" class="view-container active">
             <div class="summary-grid" id="homeSummary"></div>
             <div class="section-title">Daftar Rumah Sakit / Klinik</div>
             <div class="rs-grid" id="rsGridContainer"></div>
         </div>
 
-        <!-- DETAIL VIEW (per RS) -->
+        <!-- DETAIL VIEW -->
         <div id="detailView" class="view-container">
             <div class="summary-grid" id="detailSummary"></div>
             <div class="section-title">Rincian Mesin</div>
@@ -581,17 +581,18 @@
 
     <script>
         (function(){
-            // ---------- STATE MANAGEMENT ----------
-            let machinesData = {};                    // data mentah dari API
-            let machineCards = new Map();             // Map machineId -> { element, parsed, data }
+            console.log('Dashboard initializing...');
+            
+            // ---------- STATE ----------
+            let machinesData = {};
+            let machineCards = new Map();            // machineId -> { element, data, parsed, cacheRefs }
             let currentView = 'home';
             let selectedRS = null;
             
-            // Cache untuk grouping dan stats
             let groupsCache = {};
             let globalStats = { total:0, hdOn:0, treatment:0, maintenance:0 };
 
-            // DOM elements
+            // DOM
             const homeView = document.getElementById('homeView');
             const detailView = document.getElementById('detailView');
             const viewTitle = document.getElementById('viewTitle');
@@ -617,15 +618,10 @@
                 const rawId = parts[0] || fullId;
                 const rawRs = parts[1] || '';
                 const rawSn = parts[2] || '';
-
                 const match = rawRs.match(/^(.+)_(\d+)$/);
                 let rsBase = rawRs;
                 let unit = '';
-                if (match) {
-                    rsBase = match[1];
-                    unit = match[2];
-                }
-
+                if (match) { rsBase = match[1]; unit = match[2]; }
                 return { id: rawId, rsRaw: rawRs, rsBase, unit, sn: rawSn };
             }
 
@@ -648,20 +644,18 @@
                 return 'stopped';
             }
 
-            // ---------- GROUPING & STATS (dengan cache) ----------
+            // ---------- GROUPING & STATS ----------
             function recomputeGroupsAndStats() {
+                console.time('recomputeGroupsAndStats');
                 groupsCache = {};
                 globalStats = { total:0, hdOn:0, treatment:0, maintenance:0 };
                 
-                Object.entries(machinesData).forEach(([id, m]) => {
+                for (const [id, m] of Object.entries(machinesData)) {
                     const parsed = parseMachineId(id);
                     const rsKey = parsed.rsBase || 'Tanpa RS';
                     
                     if (!groupsCache[rsKey]) {
-                        groupsCache[rsKey] = {
-                            machines: [],
-                            total: 0, hdOn: 0, treatment: 0, maintenance: 0
-                        };
+                        groupsCache[rsKey] = { machines: [], total:0, hdOn:0, treatment:0, maintenance:0 };
                     }
                     groupsCache[rsKey].machines.push({ machineId: id, data: m, parsed });
                     groupsCache[rsKey].total++;
@@ -673,21 +667,22 @@
                     if (m.status === 'running') globalStats.hdOn++;
                     if (m.pump_status === 'running') globalStats.treatment++;
                     if (m.maintenance_count > 0) globalStats.maintenance++;
-                });
+                }
+                console.timeEnd('recomputeGroupsAndStats');
             }
 
-            // ---------- RENDER SUMMARY CARDS (update tanpa recreate) ----------
+            // ---------- UPDATE SUMMARY CARDS (incremental) ----------
             function updateSummaryCards(container, stats) {
+                console.time('updateSummaryCards');
                 const total = stats.total;
                 const pct = (val) => total ? (val / total * 100) : 0;
                 
-                const cards = container.children;
-                if (cards.length === 4) {
-                    // Update existing cards
-                    cards[0].querySelector('.card-value').textContent = total;
-                    cards[1].querySelector('.card-value').textContent = stats.hdOn;
-                    cards[2].querySelector('.card-value').textContent = stats.treatment;
-                    cards[3].querySelector('.card-value').textContent = stats.maintenance;
+                if (container.children.length === 4) {
+                    // Update existing
+                    container.children[0].querySelector('.card-value').textContent = total;
+                    container.children[1].querySelector('.card-value').textContent = stats.hdOn;
+                    container.children[2].querySelector('.card-value').textContent = stats.treatment;
+                    container.children[3].querySelector('.card-value').textContent = stats.maintenance;
                     
                     const updateDonut = (card, percent) => {
                         const donut = card.querySelector('.donut-chart');
@@ -696,86 +691,61 @@
                         donut.style.background = `conic-gradient(#4a90e2 ${deg}deg, #e0e7ff ${deg}deg)`;
                         label.textContent = percent.toFixed(0) + '%';
                     };
-                    
+                    updateDonut(container.children[0], 100);
+                    updateDonut(container.children[1], pct(stats.hdOn));
+                    updateDonut(container.children[2], pct(stats.treatment));
+                    updateDonut(container.children[3], pct(stats.maintenance));
+                } else {
+                    // First render
+                    container.innerHTML = `
+                        <div class="summary-card"><div class="card-header"><span class="card-label">Total Mesin</span><i class="fas fa-server"></i></div><div class="card-value">${total}</div><div class="donut-container"><div class="donut-chart" style="background: conic-gradient(#4a90e2 360deg, #e0e7ff 0deg);"><div class="donut-inner"></div></div><span class="donut-label">100%</span></div></div>
+                        <div class="summary-card"><div class="card-header"><span class="card-label">HD ON</span><i class="fas fa-play-circle"></i></div><div class="card-value">${stats.hdOn}</div><div class="donut-container"><div class="donut-chart"><div class="donut-inner"></div></div><span class="donut-label">0%</span></div></div>
+                        <div class="summary-card"><div class="card-header"><span class="card-label">IN TREATMENT</span><i class="fas fa-syringe"></i></div><div class="card-value">${stats.treatment}</div><div class="donut-container"><div class="donut-chart"><div class="donut-inner"></div></div><span class="donut-label">0%</span></div></div>
+                        <div class="summary-card"><div class="card-header"><span class="card-label">NEED MAINTENANCE</span><i class="fas fa-tools"></i></div><div class="card-value">${stats.maintenance}</div><div class="donut-container"><div class="donut-chart"><div class="donut-inner"></div></div><span class="donut-label">0%</span></div></div>
+                    `;
+                    const cards = container.children;
+                    const updateDonut = (card, percent) => {
+                        const donut = card.querySelector('.donut-chart');
+                        const label = card.querySelector('.donut-label');
+                        const deg = (percent / 100) * 360;
+                        donut.style.background = `conic-gradient(#4a90e2 ${deg}deg, #e0e7ff ${deg}deg)`;
+                        label.textContent = percent.toFixed(0) + '%';
+                    };
                     updateDonut(cards[0], 100);
                     updateDonut(cards[1], pct(stats.hdOn));
                     updateDonut(cards[2], pct(stats.treatment));
                     updateDonut(cards[3], pct(stats.maintenance));
-                } else {
-                    // First time render
-                    container.innerHTML = `
-                        <div class="summary-card">
-                            <div class="card-header"><span class="card-label">Total Mesin</span><i class="fas fa-server"></i></div>
-                            <div class="card-value">${total}</div>
-                            <div class="donut-container"><div class="donut-chart" style="background: conic-gradient(#4a90e2 360deg, #e0e7ff 0deg);"><div class="donut-inner"></div></div><span class="donut-label">100%</span></div>
-                        </div>
-                        <div class="summary-card">
-                            <div class="card-header"><span class="card-label">HD ON</span><i class="fas fa-play-circle"></i></div>
-                            <div class="card-value">${stats.hdOn}</div>
-                            <div class="donut-container"><div class="donut-chart"><div class="donut-inner"></div></div><span class="donut-label">0%</span></div>
-                        </div>
-                        <div class="summary-card">
-                            <div class="card-header"><span class="card-label">IN TREATMENT</span><i class="fas fa-syringe"></i></div>
-                            <div class="card-value">${stats.treatment}</div>
-                            <div class="donut-container"><div class="donut-chart"><div class="donut-inner"></div></div><span class="donut-label">0%</span></div>
-                        </div>
-                        <div class="summary-card">
-                            <div class="card-header"><span class="card-label">NEED MAINTENANCE</span><i class="fas fa-tools"></i></div>
-                            <div class="card-value">${stats.maintenance}</div>
-                            <div class="donut-container"><div class="donut-chart"><div class="donut-inner"></div></div><span class="donut-label">0%</span></div>
-                        </div>
-                    `;
-                    // Update donut after creation
-                    const newCards = container.children;
-                    const updateDonut = (card, percent) => {
-                        const donut = card.querySelector('.donut-chart');
-                        const label = card.querySelector('.donut-label');
-                        const deg = (percent / 100) * 360;
-                        donut.style.background = `conic-gradient(#4a90e2 ${deg}deg, #e0e7ff ${deg}deg)`;
-                        label.textContent = percent.toFixed(0) + '%';
-                    };
-                    updateDonut(newCards[0], 100);
-                    updateDonut(newCards[1], pct(stats.hdOn));
-                    updateDonut(newCards[2], pct(stats.treatment));
-                    updateDonut(newCards[3], pct(stats.maintenance));
                 }
+                console.timeEnd('updateSummaryCards');
             }
 
-            // ---------- RENDER RS GRID (Home) ----------
+            // ---------- RENDER RS GRID ----------
             function renderRSGrid() {
+                console.time('renderRSGrid');
                 const rsList = Object.keys(groupsCache).sort();
                 if (rsList.length === 0) {
                     rsGridContainer.innerHTML = '<div class="empty-message">Belum ada data mesin.</div>';
+                    console.timeEnd('renderRSGrid');
                     return;
                 }
                 
                 let html = '';
-                rsList.forEach(rs => {
+                for (const rs of rsList) {
                     const g = groupsCache[rs];
-                    html += `
-                        <div class="rs-card" data-rs="${rs}">
-                            <div class="rs-name">${rs}</div>
-                            <div class="rs-unit-count"><i class="fas fa-microchip"></i> ${g.total} unit</div>
-                            <div class="rs-stats-mini">
-                                <span class="stat-dot"><span class="dot green"></span> ${g.hdOn}</span>
-                                <span class="stat-dot"><span class="dot blue"></span> ${g.treatment}</span>
-                                <span class="stat-dot"><span class="dot orange"></span> ${g.maintenance}</span>
-                            </div>
-                        </div>
-                    `;
-                });
+                    html += `<div class="rs-card" data-rs="${rs}"><div class="rs-name">${rs}</div><div class="rs-unit-count"><i class="fas fa-microchip"></i> ${g.total} unit</div><div class="rs-stats-mini"><span class="stat-dot"><span class="dot green"></span> ${g.hdOn}</span><span class="stat-dot"><span class="dot blue"></span> ${g.treatment}</span><span class="stat-dot"><span class="dot orange"></span> ${g.maintenance}</span></div></div>`;
+                }
                 rsGridContainer.innerHTML = html;
                 
-                // Event listeners
                 rsGridContainer.querySelectorAll('.rs-card').forEach(card => {
                     card.addEventListener('click', () => {
                         selectedRS = card.dataset.rs;
                         showDetailView();
                     });
                 });
+                console.timeEnd('renderRSGrid');
             }
 
-            // ---------- MACHINE CARDS MANAGEMENT ----------
+            // ---------- MACHINE CARD OPERATIONS ----------
             function createMachineCardElement(machineId, data, parsed) {
                 const div = document.createElement('div');
                 div.className = 'machine-card';
@@ -812,94 +782,107 @@
                     <div class="last-update" data-field="lastUpdate">Update: ${formatDateTime(data.last_update)}</div>
                 `;
                 
-                // Maintenance badge listener
                 const badge = div.querySelector('.maintenance-badge');
                 badge.addEventListener('click', (e) => {
                     e.stopPropagation();
                     showMaintenanceModal(machineId, data.maintenance_required || []);
                 });
                 
-                return div;
+                // Simpan referensi ke elemen yang sering diupdate untuk performa
+                const cacheRefs = {
+                    statusBadge: div.querySelector('.status-badge'),
+                    maintBadge: badge,
+                    activeEl: div.querySelector('[data-field="active"]'),
+                    totalActiveEl: div.querySelector('[data-field="totalActive"]'),
+                    completedTreatmentsEl: div.querySelector('[data-field="completedTreatments"]'),
+                    dialysisEl: div.querySelector('[data-field="dialysis"]'),
+                    totalDialysisEl: div.querySelector('[data-field="totalDialysis"]'),
+                    completedDialysisEl: div.querySelector('[data-field="completedDialysis"]'),
+                    lastUpdateEl: div.querySelector('[data-field="lastUpdate"]')
+                };
+                
+                return { element: div, cacheRefs };
             }
 
-            function updateMachineCardElement(element, newData) {
-                const machineId = element.dataset.machineId;
-                const oldData = machineCards.get(machineId)?.data;
-                if (!oldData) return;
+            function updateMachineCardElement(cardInfo, newData) {
+                const { element, cacheRefs } = cardInfo;
+                const oldData = cardInfo.data;
                 
-                // Update status badge
+                // Status badge
                 const mainStatus = getMainStatus(newData);
-                const statusBadge = element.querySelector('.status-badge');
                 let statusClass = 'stopped', statusText = 'IDLE';
                 if (mainStatus === 'running') { statusClass = 'running'; statusText = 'HD ON'; }
                 else if (mainStatus === 'treatment') { statusClass = 'treatment'; statusText = 'TREATMENT'; }
                 else if (mainStatus === 'maintenance') { statusClass = 'maintenance'; statusText = 'MAINTENANCE'; }
-                statusBadge.className = `status-badge ${statusClass}`;
-                statusBadge.textContent = statusText;
+                cacheRefs.statusBadge.className = `status-badge ${statusClass}`;
+                cacheRefs.statusBadge.textContent = statusText;
                 
-                // Update maintenance badge
-                const maintBadge = element.querySelector('.maintenance-badge');
+                // Maintenance badge
                 if (newData.maintenance_count > 0) {
-                    maintBadge.style.display = 'inline-block';
-                    maintBadge.textContent = `⚠️ ${newData.maintenance_count}`;
+                    cacheRefs.maintBadge.style.display = 'inline-block';
+                    cacheRefs.maintBadge.textContent = `⚠️ ${newData.maintenance_count}`;
                 } else {
-                    maintBadge.style.display = 'none';
+                    cacheRefs.maintBadge.style.display = 'none';
                 }
                 
-                // Update numeric fields
-                element.querySelector('[data-field="active"]').textContent = formatTime(newData.current_session_duration||0);
-                element.querySelector('[data-field="totalActive"]').textContent = formatTime(newData.total_active_time||0);
-                element.querySelector('[data-field="completedTreatments"]').textContent = newData.completed_treatments||0;
-                element.querySelector('[data-field="dialysis"]').textContent = formatTime(newData.current_dialysis_duration||0);
-                element.querySelector('[data-field="totalDialysis"]').textContent = formatTime(newData.total_dialysis_time||0);
-                element.querySelector('[data-field="completedDialysis"]').textContent = newData.completed_dialysis||0;
-                element.querySelector('[data-field="lastUpdate"]').textContent = `Update: ${formatDateTime(newData.last_update)}`;
+                // Update fields
+                cacheRefs.activeEl.textContent = formatTime(newData.current_session_duration||0);
+                cacheRefs.totalActiveEl.textContent = formatTime(newData.total_active_time||0);
+                cacheRefs.completedTreatmentsEl.textContent = newData.completed_treatments||0;
+                cacheRefs.dialysisEl.textContent = formatTime(newData.current_dialysis_duration||0);
+                cacheRefs.totalDialysisEl.textContent = formatTime(newData.total_dialysis_time||0);
+                cacheRefs.completedDialysisEl.textContent = newData.completed_dialysis||0;
+                cacheRefs.lastUpdateEl.textContent = `Update: ${formatDateTime(newData.last_update)}`;
                 
-                // Update stored data
-                machineCards.get(machineId).data = newData;
+                cardInfo.data = newData;
             }
 
             function syncMachineGrid(rsName) {
+                console.time('syncMachineGrid');
                 const group = groupsCache[rsName];
                 if (!group) {
                     machinesGridContainer.innerHTML = '<div class="empty-message">Tidak ada mesin di RS ini.</div>';
+                    console.timeEnd('syncMachineGrid');
                     return;
                 }
                 
                 const currentMachineIds = new Set(group.machines.map(m => m.machineId));
                 
-                // Remove cards that are no longer in this RS
-                for (let [id, card] of machineCards) {
+                // Hapus kartu yang tidak lagi di RS ini
+                for (let [id, cardInfo] of machineCards) {
                     if (!currentMachineIds.has(id)) {
-                        card.element.remove();
+                        cardInfo.element.remove();
                         machineCards.delete(id);
                     }
                 }
                 
-                // Add or update cards
-                group.machines.forEach(({ machineId, data, parsed }) => {
-                    const existing = machineCards.get(machineId);
-                    if (existing) {
-                        // Update existing card
-                        updateMachineCardElement(existing.element, data);
+                // Tambah atau update
+                for (const { machineId, data, parsed } of group.machines) {
+                    let cardInfo = machineCards.get(machineId);
+                    if (cardInfo) {
+                        // Update
+                        updateMachineCardElement(cardInfo, data);
                     } else {
-                        // Create new card
-                        const cardEl = createMachineCardElement(machineId, data, parsed);
-                        machinesGridContainer.appendChild(cardEl);
-                        machineCards.set(machineId, { element: cardEl, data, parsed });
+                        // Create
+                        const { element, cacheRefs } = createMachineCardElement(machineId, data, parsed);
+                        machinesGridContainer.appendChild(element);
+                        cardInfo = { element, cacheRefs, data, parsed };
+                        machineCards.set(machineId, cardInfo);
                     }
-                });
+                }
                 
-                // Sort cards by machineId for consistent order
+                // Urutkan ulang di DOM (opsional)
                 const sortedIds = Array.from(currentMachineIds).sort();
-                sortedIds.forEach(id => {
-                    const card = machineCards.get(id);
-                    if (card) machinesGridContainer.appendChild(card.element);
-                });
+                for (const id of sortedIds) {
+                    const cardInfo = machineCards.get(id);
+                    if (cardInfo) machinesGridContainer.appendChild(cardInfo.element);
+                }
+                console.timeEnd('syncMachineGrid');
             }
 
-            // ---------- VIEW MANAGEMENT ----------
+            // ---------- VIEW SWITCHING ----------
             function showHomeView() {
+                console.log('showHomeView');
                 currentView = 'home';
                 selectedRS = null;
                 viewTitle.textContent = 'Ringkasan';
@@ -914,6 +897,7 @@
 
             function showDetailView() {
                 if (!selectedRS) return;
+                console.log('showDetailView', selectedRS);
                 currentView = 'detail';
                 viewTitle.textContent = selectedRS;
                 backButton.classList.remove('hidden');
@@ -922,8 +906,7 @@
                 navHome.classList.remove('active');
                 
                 const group = groupsCache[selectedRS] || { total:0, hdOn:0, treatment:0, maintenance:0 };
-                const stats = { total: group.total, hdOn: group.hdOn, treatment: group.treatment, maintenance: group.maintenance };
-                updateSummaryCards(detailSummary, stats);
+                updateSummaryCards(detailSummary, { total: group.total, hdOn: group.hdOn, treatment: group.treatment, maintenance: group.maintenance });
                 syncMachineGrid(selectedRS);
             }
 
@@ -976,57 +959,50 @@
                 modal.style.display = 'block';
             }
 
-            // ---------- DATA FETCH & SYNC ----------
+            // ---------- DATA FETCH ----------
             async function loadData() {
+                console.time('loadData total');
                 try {
                     const res = await fetch('/api/machines');
                     if (!res.ok) throw new Error('Gagal fetch');
                     const newData = await res.json();
                     
-                    // Update machinesData
                     machinesData = newData;
                     
-                    // Recompute grouping & stats
+                    console.time('recomputeGroupsAndStats');
                     recomputeGroupsAndStats();
+                    console.timeEnd('recomputeGroupsAndStats');
                     
-                    // Update views based on current state
                     if (currentView === 'home') {
                         updateSummaryCards(homeSummary, globalStats);
                         renderRSGrid();
                     } else if (currentView === 'detail' && selectedRS) {
                         const group = groupsCache[selectedRS] || { total:0, hdOn:0, treatment:0, maintenance:0 };
-                        updateSummaryCards(detailSummary, { 
-                            total: group.total, hdOn: group.hdOn, treatment: group.treatment, maintenance: group.maintenance 
-                        });
+                        updateSummaryCards(detailSummary, { total: group.total, hdOn: group.hdOn, treatment: group.treatment, maintenance: group.maintenance });
                         syncMachineGrid(selectedRS);
                     }
                 } catch (err) {
                     console.error('Load data error:', err);
                 }
+                console.timeEnd('loadData total');
             }
 
-            // ---------- TIMER (real-time update) ----------
+            // ---------- TIMER ----------
             function updateTimers() {
-                for (let [id, card] of machineCards) {
-                    const data = card.data;
+                for (let [id, cardInfo] of machineCards) {
+                    const data = cardInfo.data;
                     if (!data) continue;
-                    const el = card.element;
+                    const refs = cardInfo.cacheRefs;
                     
                     if (data.status === 'running') {
-                        const activeEl = el.querySelector('[data-field="active"]');
-                        if (activeEl) {
-                            let sec = (data.current_session_duration || 0) + 1;
-                            data.current_session_duration = sec;
-                            activeEl.textContent = formatTime(sec);
-                        }
+                        let sec = (data.current_session_duration || 0) + 1;
+                        data.current_session_duration = sec;
+                        refs.activeEl.textContent = formatTime(sec);
                     }
                     if (data.pump_status === 'running') {
-                        const dialysisEl = el.querySelector('[data-field="dialysis"]');
-                        if (dialysisEl) {
-                            let sec = (data.current_dialysis_duration || 0) + 1;
-                            data.current_dialysis_duration = sec;
-                            dialysisEl.textContent = formatTime(sec);
-                        }
+                        let sec = (data.current_dialysis_duration || 0) + 1;
+                        data.current_dialysis_duration = sec;
+                        refs.dialysisEl.textContent = formatTime(sec);
                     }
                 }
             }
