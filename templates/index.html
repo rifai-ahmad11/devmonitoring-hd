@@ -669,13 +669,7 @@
                 console.timeEnd('    ├─ syncMachineGrid');
             }
 
-            refreshBtn.addEventListener('click', () => {
-                console.log('🔄 Manual Refresh dimulai');
-                console.time('🔄 Total Manual Refresh');
-                loadData().then(() => {
-                    console.timeEnd('🔄 Total Manual Refresh');
-                });
-            });
+
             
             // ---------- HELPERS ----------
             function parseMachineId(fullId) {
@@ -1075,7 +1069,13 @@
             // ---------- EVENT LISTENERS ----------
             navHome.addEventListener('click', showHomeView);
             backButton.addEventListener('click', showHomeView);
-            refreshBtn.addEventListener('click', loadData);
+            refreshBtn.addEventListener('click', () => {
+                console.log('🔄 Manual Refresh dimulai');
+                console.time('🔄 Total Manual Refresh');
+                loadData().then(() => {
+                    console.timeEnd('🔄 Total Manual Refresh');
+                });
+            });
             
             // Inisialisasi
             (async () => {
