@@ -168,6 +168,14 @@
             display: block;
         }
 
+        /* Dynamic Content (Loading) */
+        #dynamicContent {
+            text-align: center;
+            padding: 40px;
+            color: rgba(255,255,255,0.9);
+            font-size: 1.2rem;
+        }
+
         /* ===== INSIGHTS CARDS (SUMMARY) dengan parameter donut sesuai referensi ===== */
         .insights {
             display: grid;
@@ -547,8 +555,13 @@
             </div>
         </div>
 
+        <!-- DYNAMIC CONTENT (LOADING) -->
+        <div id="dynamicContent">
+            <div class="empty-message">Memuat data...</div>
+        </div>
+
         <!-- HOME VIEW (Ringkasan) -->
-        <div id="homeView" class="view-container active">
+        <div id="homeView" class="view-container">
             <div class="insights" id="homeInsights"></div>
             <div class="section-title">Daftar Rumah Sakit / Klinik</div>
             <div class="rs-grid" id="rsGridContainer"></div>
@@ -604,6 +617,9 @@
             const rsGridContainer = document.getElementById('rsGridContainer');
             const detailInsights = document.getElementById('detailInsights');
             const machinesGridContainer = document.getElementById('machinesGridContainer');
+            
+            // Elemen dynamic content untuk loading
+            const dynamicContent = document.getElementById('dynamicContent');
 
             const modal = document.getElementById('maintenanceModal');
             const modalMachineId = document.getElementById('modalMachineId');
@@ -612,7 +628,7 @@
             closeModalBtn.addEventListener('click', () => modal.style.display = 'none');
             window.addEventListener('click', (e) => { if (e.target === modal) modal.style.display = 'none'; });
 
-            // ---------- CONSTANTS FOR SVG CIRCLE (parameter sesuai referensi) ----------
+            // ---------- CONSTANTS FOR SVG CIRCLE ----------
             const CIRCLE_RADIUS = 36;
             const CIRCUMFERENCE = 2 * Math.PI * CIRCLE_RADIUS; // ≈ 226.194671
 
@@ -679,7 +695,7 @@
                 });
             }
 
-            // ---------- RENDER INSIGHTS CARDS (SVG Donut dengan parameter sesuai referensi) ----------
+            // ---------- RENDER INSIGHTS CARDS (SVG Donut) ----------
             function createInsightCard(title, value, percent) {
                 const card = document.createElement('div');
                 card.className = 'card-detail';
@@ -708,7 +724,6 @@
                 leftH2.textContent = value;
                 numberDiv.textContent = percent + '%';
                 
-                // hitung stroke-dashoffset berdasarkan persentase
                 const offset = CIRCUMFERENCE - (percent / 100) * CIRCUMFERENCE;
                 circle.style.strokeDashoffset = offset;
             }
@@ -717,7 +732,6 @@
                 const total = stats.total;
                 const pct = (val) => total ? Math.round((val / total) * 100) : 0;
                 
-                // Jika container masih kosong, buat keempat card
                 if (container.children.length === 0) {
                     const cardTotal = createInsightCard('Total Mesin', total, 100);
                     const cardHdOn = createInsightCard('HD ON', stats.hdOn, pct(stats.hdOn));
@@ -728,7 +742,6 @@
                     container.appendChild(cardTreatment);
                     container.appendChild(cardMaintenance);
                     
-                    // Set offset awal untuk masing-masing card
                     updateInsightCard(cardTotal, total, 100);
                     updateInsightCard(cardHdOn, stats.hdOn, pct(stats.hdOn));
                     updateInsightCard(cardTreatment, stats.treatment, pct(stats.treatment));
@@ -775,7 +788,6 @@
                 });
             }
 
-            // Helper sederhana untuk escape HTML
             function escapeHtml(str) {
                 return str.replace(/[&<>]/g, function(m) {
                     if (m === '&') return '&amp;';
@@ -867,7 +879,6 @@
                 
                 const currentMachineIds = new Set(group.machines.map(m => m.machineId));
                 
-                // Hapus card yang tidak ada di grup saat ini
                 for (let [id, card] of machineCards) {
                     if (!currentMachineIds.has(id)) {
                         card.element.remove();
@@ -875,7 +886,6 @@
                     }
                 }
                 
-                // Update atau tambahkan card baru
                 group.machines.forEach(({ machineId, data, parsed }) => {
                     const existing = machineCards.get(machineId);
                     if (existing) {
@@ -888,7 +898,6 @@
                     }
                 });
                 
-                // Urutkan tampilan berdasarkan ID
                 const sortedIds = Array.from(currentMachineIds).sort();
                 sortedIds.forEach(id => {
                     const card = machineCards.get(id);
@@ -896,15 +905,18 @@
                 });
             }
 
-            // ---------- VIEW MANAGEMENT ----------
+            // ---------- VIEW MANAGEMENT with loading ----------
             function showHomeView() {
                 currentView = 'home';
                 selectedRS = null;
                 viewTitle.textContent = 'Ringkasan';
                 backButton.classList.add('hidden');
+                navHome.classList.add('active');
+                
+                // Sembunyikan dynamic content, tampilkan homeView
+                dynamicContent.style.display = 'none';
                 homeView.classList.add('active');
                 detailView.classList.remove('active');
-                navHome.classList.add('active');
                 
                 renderInsights(homeInsights, globalStats);
                 renderRSGrid();
@@ -915,9 +927,11 @@
                 currentView = 'detail';
                 viewTitle.textContent = selectedRS;
                 backButton.classList.remove('hidden');
+                navHome.classList.remove('active');
+                
+                dynamicContent.style.display = 'none';
                 homeView.classList.remove('active');
                 detailView.classList.add('active');
-                navHome.classList.remove('active');
                 
                 const group = groupsCache[selectedRS] || { total:0, hdOn:0, treatment:0, maintenance:0 };
                 const stats = { total: group.total, hdOn: group.hdOn, treatment: group.treatment, maintenance: group.maintenance };
@@ -978,8 +992,14 @@
                 modal.style.display = 'block';
             }
 
-            // ---------- DATA FETCH & SYNC ----------
+            // ---------- DATA FETCH dengan loading di dynamicContent ----------
             async function loadData() {
+                // Tampilkan dynamic content (loading), sembunyikan kedua view
+                dynamicContent.style.display = 'block';
+                homeView.classList.remove('active');
+                detailView.classList.remove('active');
+                dynamicContent.innerHTML = '<div class="empty-message">Memuat data...</div>';
+                
                 try {
                     const res = await fetch('/api/machines');
                     if (!res.ok) throw new Error('Gagal fetch');
@@ -988,16 +1008,30 @@
                     machinesData = newData;
                     recomputeGroupsAndStats();
                     
+                    // Sembunyikan dynamic content, tampilkan view yang sesuai
+                    dynamicContent.style.display = 'none';
                     if (currentView === 'home') {
-                        renderInsights(homeInsights, globalStats);
-                        renderRSGrid();
+                        showHomeView();
                     } else if (currentView === 'detail' && selectedRS) {
+                        // pastikan detail view di-render ulang
                         const group = groupsCache[selectedRS] || { total:0, hdOn:0, treatment:0, maintenance:0 };
-                        renderInsights(detailInsights, { total: group.total, hdOn: group.hdOn, treatment: group.treatment, maintenance: group.maintenance });
+                        const stats = { total: group.total, hdOn: group.hdOn, treatment: group.treatment, maintenance: group.maintenance };
+                        renderInsights(detailInsights, stats);
                         syncMachineGrid(selectedRS);
+                        detailView.classList.add('active');
+                        homeView.classList.remove('active');
+                        dynamicContent.style.display = 'none';
+                        viewTitle.textContent = selectedRS;
+                        backButton.classList.remove('hidden');
+                        navHome.classList.remove('active');
+                    } else {
+                        // fallback ke home
+                        currentView = 'home';
+                        showHomeView();
                     }
                 } catch (err) {
                     console.error('Load data error:', err);
+                    dynamicContent.innerHTML = '<div class="empty-message">Gagal memuat data. Coba lagi nanti.</div>';
                 }
             }
 
@@ -1028,14 +1062,21 @@
             }
 
             // ---------- EVENT LISTENERS ----------
-            navHome.addEventListener('click', showHomeView);
-            backButton.addEventListener('click', showHomeView);
+            navHome.addEventListener('click', () => {
+                currentView = 'home';
+                selectedRS = null;
+                loadData(); // akan memuat ulang dan menampilkan home
+            });
+            backButton.addEventListener('click', () => {
+                currentView = 'home';
+                selectedRS = null;
+                loadData();
+            });
             refreshBtn.addEventListener('click', loadData);
             
             // Inisialisasi awal
             (async () => {
                 await loadData();
-                showHomeView();
             })();
             
             setInterval(updateTimers, 1000);
