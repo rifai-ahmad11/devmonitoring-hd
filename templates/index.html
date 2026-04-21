@@ -846,7 +846,7 @@
             function updateMachineCardElement(element, newData) {
                 const mainStatus = getMainStatus(newData);
                 const statusBadge = element.querySelector('.status-badge');
-                let statusClass = 'stopped', statusText = 'IDLE';
+                let statusClass = 'stopped', statusText = 'HD OFF';
                 if (mainStatus === 'running') { statusClass = 'running'; statusText = 'HD ON'; }
                 else if (mainStatus === 'treatment') { statusClass = 'treatment'; statusText = 'TREATMENT'; }
                 else if (mainStatus === 'maintenance') { statusClass = 'maintenance'; statusText = 'MAINTENANCE'; }
@@ -1080,7 +1080,7 @@
             })();
             
             setInterval(updateTimers, 1000);
-            setInterval(loadData, 30000);
+            setInterval(loadData, 300000);
         })();
     </script>
 </body>
