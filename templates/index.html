@@ -6,12 +6,8 @@
     <title>HD Machine Monitoring Dashboard</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
+        /* ===== GLOBAL STYLES (sama seperti sebelumnya, ditambah beberapa penyesuaian) ===== */
+        * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
@@ -19,8 +15,6 @@
             display: flex;
             color: #1e1e2f;
         }
-
-        /* SIDEBAR */
         .sidebar {
             width: 260px;
             background: rgba(255, 255, 255, 0.95);
@@ -36,14 +30,12 @@
             top: 0;
             overflow-y: auto;
         }
-
         .logo-area {
             display: flex;
             flex-direction: column;
             align-items: center;
             margin-bottom: 32px;
         }
-
         .logo-icon {
             width: 64px;
             height: 64px;
@@ -57,7 +49,6 @@
             margin-bottom: 16px;
             box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2);
         }
-
         .sidebar-title {
             font-size: 18px;
             font-weight: 700;
@@ -65,21 +56,18 @@
             text-align: center;
             line-height: 1.4;
         }
-
         .sidebar-subtitle {
             font-size: 12px;
             color: #5f7d9c;
             margin-top: 6px;
             text-align: center;
         }
-
         .nav-menu {
             display: flex;
             flex-direction: column;
             gap: 8px;
             margin-top: 16px;
         }
-
         .nav-item {
             display: flex;
             align-items: center;
@@ -92,23 +80,12 @@
             transition: all 0.2s;
             background-color: transparent;
         }
-
-        .nav-item i {
-            width: 20px;
-            font-size: 1.2rem;
-            color: #4a6a8a;
-        }
-
+        .nav-item i { width: 20px; font-size: 1.2rem; color: #4a6a8a; }
         .nav-item.active {
             background-color: #eef4ff;
             color: #2b6cb0;
         }
-
-        .nav-item.active i {
-            color: #2b6cb0;
-        }
-
-        /* MAIN CONTENT */
+        .nav-item.active i { color: #2b6cb0; }
         .main-content {
             flex: 1;
             overflow-y: auto;
@@ -116,14 +93,12 @@
             color: white;
             height: 100vh;
         }
-
         .content-header {
             display: flex;
             align-items: center;
             margin-bottom: 28px;
             flex-wrap: wrap;
         }
-
         .content-header h1 {
             font-size: 28px;
             font-weight: 600;
@@ -131,12 +106,7 @@
             text-shadow: 2px 2px 6px rgba(0,0,0,0.2);
             flex: 1;
         }
-
-        .header-actions {
-            display: flex;
-            gap: 12px;
-        }
-
+        .header-actions { display: flex; gap: 12px; }
         .back-button, .refresh-button {
             background: rgba(255, 255, 255, 0.2);
             border: 1px solid rgba(255, 255, 255, 0.3);
@@ -152,23 +122,10 @@
             transition: all 0.2s;
             backdrop-filter: blur(4px);
         }
-
-        .back-button:hover, .refresh-button:hover {
-            background: rgba(255, 255, 255, 0.4);
-        }
-
+        .back-button:hover, .refresh-button:hover { background: rgba(255, 255, 255, 0.4); }
         .back-button.hidden { display: none; }
-
-        /* VIEW CONTAINERS */
-        .view-container {
-            display: none;
-        }
-
-        .view-container.active {
-            display: block;
-        }
-
-        /* Dynamic Content (Loading) */
+        .view-container { display: none; }
+        .view-container.active { display: block; }
         #dynamicContent {
             text-align: center;
             padding: 40px;
@@ -176,14 +133,13 @@
             font-size: 1.2rem;
         }
 
-        /* ===== INSIGHTS CARDS (SUMMARY) dengan parameter donut sesuai referensi ===== */
+        /* ===== INSIGHTS CARDS (Donut) ===== */
         .insights {
             display: grid;
             grid-template-columns: repeat(4, 1fr);
             gap: 1.6rem;
             margin-bottom: 2rem;
         }
-
         .insights .card-detail {
             background: white;
             padding: 1.5rem;
@@ -191,18 +147,15 @@
             box-shadow: 0 12px 24px rgba(0, 0, 0, 0.15);
             transition: all 300ms ease;
         }
-
         .insights .card-detail:hover {
             box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1);
             transform: translateY(-2px);
         }
-
         .insights .card-detail .middle {
             display: flex;
             align-items: center;
             justify-content: space-between;
         }
-
         .insights .card-detail .left h3 {
             margin-bottom: 0.5rem;
             font-size: 1rem;
@@ -211,42 +164,32 @@
             text-transform: uppercase;
             letter-spacing: 0.3px;
         }
-
         .insights .card-detail .left h2 {
             font-size: 2.5rem;
             font-weight: 700;
             color: #1e3a6f;
         }
-
         .insights .progress {
             position: relative;
             width: 92px;
             height: 92px;
             border-radius: 50%;
         }
-
-        .insights svg {
-            width: 92px;
-            height: 92px;
-        }
-
+        .insights svg { width: 92px; height: 92px; }
         .insights svg circle {
             fill: none;
             stroke: #4a90e2;
             stroke-linecap: round;
             stroke-width: 10;
             transform: translate(5px, 5px);
-            stroke-dasharray: 226.19;  /* 2 * PI * 36 ≈ 226.19 */
+            stroke-dasharray: 226.19;
             stroke-dashoffset: 0;
             transition: stroke-dashoffset 0.3s ease;
         }
-
         .insights .progress .number {
             position: absolute;
-            top: 0;
-            left: 0;
-            height: 100%;
-            width: 100%;
+            top: 0; left: 0;
+            height: 100%; width: 100%;
             display: flex;
             justify-content: center;
             align-items: center;
@@ -255,7 +198,7 @@
             font-size: 1.2rem;
         }
 
-        /* RS GRID */
+        /* ===== CARD GRID (Region, Subregion, Hospital) ===== */
         .section-title {
             font-size: 22px;
             font-weight: 600;
@@ -263,14 +206,12 @@
             text-shadow: 1px 1px 4px rgba(0,0,0,0.2);
             margin-bottom: 18px;
         }
-
-        .rs-grid {
+        .card-grid {
             display: grid;
             grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
             gap: 20px;
         }
-
-        .rs-card {
+        .region-card, .subregion-card, .hospital-card {
             background: white;
             border-radius: 16px;
             padding: 22px 20px;
@@ -278,20 +219,17 @@
             cursor: pointer;
             transition: all 0.2s;
         }
-
-        .rs-card:hover {
+        .region-card:hover, .subregion-card:hover, .hospital-card:hover {
             transform: translateY(-4px);
             box-shadow: 0 18px 30px rgba(0, 0, 0, 0.2);
         }
-
-        .rs-name {
+        .card-title {
             font-size: 18px;
             font-weight: 700;
             color: #1e3a6f;
             margin-bottom: 8px;
         }
-
-        .rs-unit-count {
+        .card-subtitle {
             font-size: 14px;
             color: #5f7d9c;
             display: flex;
@@ -299,37 +237,29 @@
             gap: 6px;
             margin-bottom: 16px;
         }
-
-        .rs-stats-mini {
+        .card-stats {
             display: flex;
             gap: 12px;
             font-size: 13px;
         }
-
         .stat-dot {
             display: flex;
             align-items: center;
             gap: 4px;
             color: #2c3e50;
         }
-
-        .dot {
-            width: 8px;
-            height: 8px;
-            border-radius: 50%;
-        }
+        .dot { width: 8px; height: 8px; border-radius: 50%; }
         .dot.green { background: #2ecc71; }
         .dot.blue { background: #3498db; }
         .dot.orange { background: #e67e22; }
 
-        /* MACHINE GRID */
+        /* ===== MACHINE GRID ===== */
         .machines-grid {
             display: grid;
             grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
             gap: 20px;
             margin-top: 20px;
         }
-
         .machine-card {
             background: white;
             border-radius: 16px;
@@ -337,7 +267,6 @@
             box-shadow: 0 12px 24px rgba(0, 0, 0, 0.15);
             transition: all 0.2s;
         }
-
         .machine-header {
             display: flex;
             justify-content: space-between;
@@ -345,23 +274,17 @@
             margin-bottom: 14px;
             flex-wrap: wrap;
         }
-
-        .machine-id-section {
-            line-height: 1.3;
-        }
-
+        .machine-id-section { line-height: 1.3; }
         .machine-main-id {
             font-size: 18px;
             font-weight: 700;
             color: #1e3a6f;
         }
-
         .machine-sub {
             font-size: 12px;
             color: #6b85a0;
             margin-top: 4px;
         }
-
         .machine-sn {
             font-family: monospace;
             font-size: 12px;
@@ -372,13 +295,11 @@
             display: inline-block;
             margin-top: 5px;
         }
-
         .header-badges {
             display: flex;
             gap: 8px;
             align-items: center;
         }
-
         .status-badge {
             padding: 6px 12px;
             border-radius: 30px;
@@ -386,12 +307,10 @@
             font-weight: 600;
             text-transform: uppercase;
         }
-
         .status-badge.running { background: #4caf50; color: white; }
         .status-badge.stopped { background: #f44336; color: white; }
         .status-badge.treatment { background: #2196f3; color: white; }
         .status-badge.idle { background: #9e9e9e; color: white; }
-
         .maintenance-badge {
             background-color: #ffa502;
             color: white;
@@ -402,37 +321,31 @@
             cursor: pointer;
             transition: all 0.2s;
         }
-
         .maintenance-badge:hover {
             background-color: #ff9500;
             transform: scale(1.02);
         }
-
         .machine-stats {
             display: flex;
             flex-direction: column;
             gap: 10px;
             margin: 12px 0 8px;
         }
-
         .stat-row {
             display: flex;
             align-items: center;
             justify-content: space-between;
         }
-
         .stat-label {
             font-size: 13px;
             color: #5f7d9c;
             font-weight: 500;
         }
-
         .stat-value {
             font-weight: 700;
             color: #1e3a6f;
             font-size: 15px;
         }
-
         .time-value {
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             color: white;
@@ -440,7 +353,6 @@
             border-radius: 6px;
             font-family: monospace;
         }
-
         .dialysis-time-value {
             background: linear-gradient(135deg, #2196f3 0%, #1976d2 100%);
             color: white;
@@ -448,21 +360,32 @@
             border-radius: 6px;
             font-family: monospace;
         }
-
         .last-update {
             font-size: 10px;
             color: #9aabbc;
             text-align: right;
             margin-top: 8px;
         }
-
         .empty-message {
             text-align: center;
             padding: 40px;
             color: rgba(255,255,255,0.9);
         }
 
-        /* MODAL */
+        /* Breadcrumb */
+        .breadcrumb {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 10px;
+            font-size: 14px;
+            color: rgba(255,255,255,0.8);
+        }
+        .breadcrumb span { cursor: pointer; }
+        .breadcrumb span:hover { text-decoration: underline; }
+        .breadcrumb i { font-size: 12px; }
+
+        /* Modal (sama seperti sebelumnya) */
         .modal {
             display: none;
             position: fixed;
@@ -517,10 +440,7 @@
         .threshold-info { background: #e8f4ff; border-radius: 8px; padding: 15px; margin-top: 20px; }
         .threshold-note { color: #ff6b6b; font-style: italic; margin-top: 20px; }
 
-        /* Responsive */
-        @media (max-width: 1200px) {
-            .insights { grid-template-columns: repeat(2, 1fr); }
-        }
+        @media (max-width: 1200px) { .insights { grid-template-columns: repeat(2, 1fr); } }
         @media (max-width: 700px) {
             body { flex-direction: column; }
             .sidebar { width: 100%; height: auto; position: relative; }
@@ -548,29 +468,43 @@
     <!-- MAIN CONTENT -->
     <div class="main-content">
         <div class="content-header">
-            <h1 id="viewTitle">Ringkasan</h1>
+            <h1 id="viewTitle">Ringkasan Nasional</h1>
             <div class="header-actions">
                 <button class="back-button hidden" id="backButton"><i class="fas fa-arrow-left"></i> Kembali</button>
                 <button class="refresh-button" id="refreshButton"><i class="fas fa-sync-alt"></i> Refresh</button>
             </div>
         </div>
 
+        <!-- Breadcrumb -->
+        <div class="breadcrumb" id="breadcrumb"></div>
+
         <!-- DYNAMIC CONTENT (LOADING) -->
         <div id="dynamicContent">
             <div class="empty-message">Memuat data...</div>
         </div>
 
-        <!-- HOME VIEW (Ringkasan) -->
-        <div id="homeView" class="view-container">
-            <div class="insights" id="homeInsights"></div>
-            <div class="section-title">Daftar Rumah Sakit / Klinik</div>
-            <div class="rs-grid" id="rsGridContainer"></div>
+        <!-- VIEW CONTAINERS -->
+        <div id="regionView" class="view-container">
+            <div class="insights" id="regionInsights"></div>
+            <div class="section-title">Pilih Region</div>
+            <div class="card-grid" id="regionGrid"></div>
         </div>
 
-        <!-- DETAIL VIEW (per RS) -->
-        <div id="detailView" class="view-container">
-            <div class="insights" id="detailInsights"></div>
-            <div class="section-title">Rincian Mesin</div>
+        <div id="subregionView" class="view-container">
+            <div class="insights" id="subregionInsights"></div>
+            <div class="section-title">Pilih Subregion</div>
+            <div class="card-grid" id="subregionGrid"></div>
+        </div>
+
+        <div id="hospitalView" class="view-container">
+            <div class="insights" id="hospitalInsights"></div>
+            <div class="section-title">Pilih Rumah Sakit / Klinik</div>
+            <div class="card-grid" id="hospitalGrid"></div>
+        </div>
+
+        <div id="machineView" class="view-container">
+            <div class="insights" id="machineInsights"></div>
+            <div class="section-title">Daftar Mesin</div>
             <div class="machines-grid" id="machinesGridContainer"></div>
         </div>
     </div>
@@ -597,30 +531,59 @@
 
     <script>
         (function(){
+            // ---------- REGION MAPPING (OPSI A) ----------
+            // Pemetaan nama RS (hasil parsing) ke region dan subregion
+            const REGION_MAPPING = {
+                "Klinik HD Avio": { region: "Jabodetabek", subregion: "Tangerang" },
+                "RS Harapan Kita": { region: "DKI Jakarta", subregion: "Jakarta Barat" },
+                "RS Bhakti Kartini": { region: "Jabodetabek", subregion: "Bekasi" },
+                "RS Hasan Sadikin": { region: "Jawa Barat", subregion: "Bandung" },
+                "RSUD Cimacan": { region: "Jawa Barat", subregion: "Cianjur" },
+                "RSUD Dr. Soetomo": { region: "Jawa Timur", subregion: "Surabaya" },
+                "RS Pondok Indah": { region: "DKI Jakarta", subregion: "Jakarta Selatan" },
+                // Tambahkan mapping lainnya sesuai kebutuhan
+                "Default": { region: "Lainnya", subregion: "Tidak Diketahui" }
+            };
+
             // ---------- STATE MANAGEMENT ----------
             let machinesData = {};
-            let machineCards = new Map();  // untuk detail view
-            let currentView = 'home';
-            let selectedRS = null;
+            let machineCards = new Map();
             
-            let groupsCache = {};
+            // Data terstruktur untuk grouping
+            let regionGroups = {};      // region -> { subregions: { subregion -> { hospitals: { rsName -> { machines, stats } } } } }
             let globalStats = { total:0, hdOn:0, treatment:0, maintenance:0 };
 
-            const homeView = document.getElementById('homeView');
-            const detailView = document.getElementById('detailView');
+            // View state
+            let currentView = 'region';    // 'region', 'subregion', 'hospital', 'machine'
+            let selectedRegion = null;
+            let selectedSubregion = null;
+            let selectedHospital = null;
+
+            // DOM Elements
             const viewTitle = document.getElementById('viewTitle');
             const backButton = document.getElementById('backButton');
             const navHome = document.getElementById('navHome');
             const refreshBtn = document.getElementById('refreshButton');
+            const breadcrumb = document.getElementById('breadcrumb');
             
-            const homeInsights = document.getElementById('homeInsights');
-            const rsGridContainer = document.getElementById('rsGridContainer');
-            const detailInsights = document.getElementById('detailInsights');
+            const regionView = document.getElementById('regionView');
+            const subregionView = document.getElementById('subregionView');
+            const hospitalView = document.getElementById('hospitalView');
+            const machineView = document.getElementById('machineView');
+            
+            const regionInsights = document.getElementById('regionInsights');
+            const subregionInsights = document.getElementById('subregionInsights');
+            const hospitalInsights = document.getElementById('hospitalInsights');
+            const machineInsights = document.getElementById('machineInsights');
+            
+            const regionGrid = document.getElementById('regionGrid');
+            const subregionGrid = document.getElementById('subregionGrid');
+            const hospitalGrid = document.getElementById('hospitalGrid');
             const machinesGridContainer = document.getElementById('machinesGridContainer');
             
-            // Elemen dynamic content untuk loading
             const dynamicContent = document.getElementById('dynamicContent');
 
+            // Modal
             const modal = document.getElementById('maintenanceModal');
             const modalMachineId = document.getElementById('modalMachineId');
             const maintenanceList = document.getElementById('maintenanceList');
@@ -628,24 +591,28 @@
             closeModalBtn.addEventListener('click', () => modal.style.display = 'none');
             window.addEventListener('click', (e) => { if (e.target === modal) modal.style.display = 'none'; });
 
-            // ---------- CONSTANTS FOR SVG CIRCLE ----------
+            // Constants for SVG
             const CIRCLE_RADIUS = 36;
-            const CIRCUMFERENCE = 2 * Math.PI * CIRCLE_RADIUS; // ≈ 226.194671
+            const CIRCUMFERENCE = 2 * Math.PI * CIRCLE_RADIUS;
 
             // ---------- HELPERS ----------
             function parseMachineId(fullId) {
                 const parts = fullId.split('-');
-                const rawId = parts[0] || fullId;
-                const rawRs = parts[1] || '';
-                const rawSn = parts[2] || '';
-                const match = rawRs.match(/^(.+)_(\d+)$/);
-                let rsBase = rawRs;
+                const model = parts[0] || fullId;
+                const rsUnit = parts[1] || '';
+                const sn = parts[2] || '';
+                
+                let rsName = rsUnit;
                 let unit = '';
-                if (match) {
-                    rsBase = match[1];
-                    unit = match[2];
+                const lastUnderscoreIndex = rsUnit.lastIndexOf('_');
+                if (lastUnderscoreIndex !== -1) {
+                    const possibleUnit = rsUnit.substring(lastUnderscoreIndex + 1);
+                    if (/^\d+$/.test(possibleUnit)) {
+                        rsName = rsUnit.substring(0, lastUnderscoreIndex);
+                        unit = possibleUnit;
+                    }
                 }
-                return { id: rawId, rsRaw: rawRs, rsBase, unit, sn: rawSn };
+                return { model, rsName: rsName || 'Tanpa RS', unit, sn };
             }
 
             function formatTime(seconds) {
@@ -667,35 +634,63 @@
                 return 'stopped';
             }
 
-            // ---------- GROUPING & STATS ----------
+            // ---------- GROUPING & STATS BERDASARKAN REGION MAPPING ----------
             function recomputeGroupsAndStats() {
-                groupsCache = {};
+                // Reset struktur
+                regionGroups = {};
                 globalStats = { total:0, hdOn:0, treatment:0, maintenance:0 };
                 
                 Object.entries(machinesData).forEach(([id, m]) => {
                     const parsed = parseMachineId(id);
-                    const rsKey = parsed.rsBase || 'Tanpa RS';
+                    const rsName = parsed.rsName;
                     
-                    if (!groupsCache[rsKey]) {
-                        groupsCache[rsKey] = {
-                            machines: [],
-                            total: 0, hdOn: 0, treatment: 0, maintenance: 0
-                        };
-                    }
-                    groupsCache[rsKey].machines.push({ machineId: id, data: m, parsed });
-                    groupsCache[rsKey].total++;
-                    if (m.status === 'running') groupsCache[rsKey].hdOn++;
-                    if (m.pump_status === 'running') groupsCache[rsKey].treatment++;
-                    if (m.maintenance_count > 0) groupsCache[rsKey].maintenance++;
+                    // Ambil region/subregion dari mapping, fallback ke Default
+                    const mapping = REGION_MAPPING[rsName] || REGION_MAPPING['Default'];
+                    const region = mapping.region;
+                    const subregion = mapping.subregion;
                     
+                    // Update global stats
                     globalStats.total++;
                     if (m.status === 'running') globalStats.hdOn++;
                     if (m.pump_status === 'running') globalStats.treatment++;
                     if (m.maintenance_count > 0) globalStats.maintenance++;
+                    
+                    // Struktur region -> subregion -> hospital -> machines
+                    if (!regionGroups[region]) {
+                        regionGroups[region] = { subregions: {}, stats: { total:0, hdOn:0, treatment:0, maintenance:0 } };
+                    }
+                    regionGroups[region].stats.total++;
+                    if (m.status === 'running') regionGroups[region].stats.hdOn++;
+                    if (m.pump_status === 'running') regionGroups[region].stats.treatment++;
+                    if (m.maintenance_count > 0) regionGroups[region].stats.maintenance++;
+                    
+                    if (!regionGroups[region].subregions[subregion]) {
+                        regionGroups[region].subregions[subregion] = { 
+                            hospitals: {}, 
+                            stats: { total:0, hdOn:0, treatment:0, maintenance:0 } 
+                        };
+                    }
+                    regionGroups[region].subregions[subregion].stats.total++;
+                    if (m.status === 'running') regionGroups[region].subregions[subregion].stats.hdOn++;
+                    if (m.pump_status === 'running') regionGroups[region].subregions[subregion].stats.treatment++;
+                    if (m.maintenance_count > 0) regionGroups[region].subregions[subregion].stats.maintenance++;
+                    
+                    if (!regionGroups[region].subregions[subregion].hospitals[rsName]) {
+                        regionGroups[region].subregions[subregion].hospitals[rsName] = {
+                            machines: [],
+                            stats: { total:0, hdOn:0, treatment:0, maintenance:0 }
+                        };
+                    }
+                    const hosp = regionGroups[region].subregions[subregion].hospitals[rsName];
+                    hosp.stats.total++;
+                    if (m.status === 'running') hosp.stats.hdOn++;
+                    if (m.pump_status === 'running') hosp.stats.treatment++;
+                    if (m.maintenance_count > 0) hosp.stats.maintenance++;
+                    hosp.machines.push({ machineId: id, data: m, parsed });
                 });
             }
 
-            // ---------- RENDER INSIGHTS CARDS (SVG Donut) ----------
+            // ---------- INSIGHTS RENDERING (Donut) ----------
             function createInsightCard(title, value, percent) {
                 const card = document.createElement('div');
                 card.className = 'card-detail';
@@ -720,10 +715,8 @@
                 const leftH2 = cardElement.querySelector('.left h2');
                 const numberDiv = cardElement.querySelector('.number');
                 const circle = cardElement.querySelector('circle');
-                
                 leftH2.textContent = value;
                 numberDiv.textContent = percent + '%';
-                
                 const offset = CIRCUMFERENCE - (percent / 100) * CIRCUMFERENCE;
                 circle.style.strokeDashoffset = offset;
             }
@@ -755,49 +748,90 @@
                 }
             }
 
-            // ---------- RENDER RS GRID (Home) ----------
-            function renderRSGrid() {
-                const rsList = Object.keys(groupsCache).sort();
-                if (rsList.length === 0) {
-                    rsGridContainer.innerHTML = '<div class="empty-message">Belum ada data mesin.</div>';
-                    return;
-                }
-                
+            // ---------- RENDER CARDS (Region, Subregion, Hospital) ----------
+            function renderRegionCards() {
+                const regions = Object.keys(regionGroups).sort();
                 let html = '';
-                rsList.forEach(rs => {
-                    const g = groupsCache[rs];
+                regions.forEach(region => {
+                    const stats = regionGroups[region].stats;
                     html += `
-                        <div class="rs-card" data-rs="${rs}">
-                            <div class="rs-name">${escapeHtml(rs)}</div>
-                            <div class="rs-unit-count"><i class="fas fa-microchip"></i> ${g.total} unit</div>
-                            <div class="rs-stats-mini">
-                                <span class="stat-dot"><span class="dot green"></span> ${g.hdOn}</span>
-                                <span class="stat-dot"><span class="dot blue"></span> ${g.treatment}</span>
-                                <span class="stat-dot"><span class="dot orange"></span> ${g.maintenance}</span>
+                        <div class="region-card" data-region="${escapeHtml(region)}">
+                            <div class="card-title">${escapeHtml(region)}</div>
+                            <div class="card-subtitle"><i class="fas fa-map-marker-alt"></i> ${stats.total} unit</div>
+                            <div class="card-stats">
+                                <span class="stat-dot"><span class="dot green"></span> ${stats.hdOn}</span>
+                                <span class="stat-dot"><span class="dot blue"></span> ${stats.treatment}</span>
+                                <span class="stat-dot"><span class="dot orange"></span> ${stats.maintenance}</span>
                             </div>
                         </div>
                     `;
                 });
-                rsGridContainer.innerHTML = html;
-                
-                rsGridContainer.querySelectorAll('.rs-card').forEach(card => {
+                regionGrid.innerHTML = html || '<div class="empty-message">Tidak ada region.</div>';
+                regionGrid.querySelectorAll('.region-card').forEach(card => {
                     card.addEventListener('click', () => {
-                        selectedRS = card.dataset.rs;
-                        showDetailView();
+                        selectedRegion = card.dataset.region;
+                        showSubregionView();
                     });
                 });
             }
 
-            function escapeHtml(str) {
-                return str.replace(/[&<>]/g, function(m) {
-                    if (m === '&') return '&amp;';
-                    if (m === '<') return '&lt;';
-                    if (m === '>') return '&gt;';
-                    return m;
+            function renderSubregionCards() {
+                if (!selectedRegion) return;
+                const subregionsObj = regionGroups[selectedRegion]?.subregions || {};
+                const subregions = Object.keys(subregionsObj).sort();
+                let html = '';
+                subregions.forEach(sub => {
+                    const stats = subregionsObj[sub].stats;
+                    html += `
+                        <div class="subregion-card" data-subregion="${escapeHtml(sub)}">
+                            <div class="card-title">${escapeHtml(sub)}</div>
+                            <div class="card-subtitle"><i class="fas fa-city"></i> ${stats.total} unit</div>
+                            <div class="card-stats">
+                                <span class="stat-dot"><span class="dot green"></span> ${stats.hdOn}</span>
+                                <span class="stat-dot"><span class="dot blue"></span> ${stats.treatment}</span>
+                                <span class="stat-dot"><span class="dot orange"></span> ${stats.maintenance}</span>
+                            </div>
+                        </div>
+                    `;
+                });
+                subregionGrid.innerHTML = html || '<div class="empty-message">Tidak ada subregion.</div>';
+                subregionGrid.querySelectorAll('.subregion-card').forEach(card => {
+                    card.addEventListener('click', () => {
+                        selectedSubregion = card.dataset.subregion;
+                        showHospitalView();
+                    });
                 });
             }
 
-            // ---------- MACHINE CARDS MANAGEMENT (Detail View) ----------
+            function renderHospitalCards() {
+                if (!selectedRegion || !selectedSubregion) return;
+                const hospitalsObj = regionGroups[selectedRegion]?.subregions[selectedSubregion]?.hospitals || {};
+                const hospitals = Object.keys(hospitalsObj).sort();
+                let html = '';
+                hospitals.forEach(hosp => {
+                    const stats = hospitalsObj[hosp].stats;
+                    html += `
+                        <div class="hospital-card" data-hospital="${escapeHtml(hosp)}">
+                            <div class="card-title">${escapeHtml(hosp)}</div>
+                            <div class="card-subtitle"><i class="fas fa-hospital"></i> ${stats.total} mesin</div>
+                            <div class="card-stats">
+                                <span class="stat-dot"><span class="dot green"></span> ${stats.hdOn}</span>
+                                <span class="stat-dot"><span class="dot blue"></span> ${stats.treatment}</span>
+                                <span class="stat-dot"><span class="dot orange"></span> ${stats.maintenance}</span>
+                            </div>
+                        </div>
+                    `;
+                });
+                hospitalGrid.innerHTML = html || '<div class="empty-message">Tidak ada rumah sakit.</div>';
+                hospitalGrid.querySelectorAll('.hospital-card').forEach(card => {
+                    card.addEventListener('click', () => {
+                        selectedHospital = card.dataset.hospital;
+                        showMachineView();
+                    });
+                });
+            }
+
+            // ---------- MACHINE CARDS (sama seperti sebelumnya) ----------
             function createMachineCardElement(machineId, data, parsed) {
                 const div = document.createElement('div');
                 div.className = 'machine-card';
@@ -815,7 +849,7 @@
                     <div class="machine-header">
                         <div class="machine-id-section">
                             <div class="machine-main-id">${escapeHtml(unitText)}</div>
-                            <div class="machine-sub">${escapeHtml(parsed.rsBase || 'Tanpa RS')}</div>
+                            <div class="machine-sub">${escapeHtml(parsed.rsName)}</div>
                             <div class="machine-sn">SN: ${escapeHtml(parsed.sn || '')}</div>
                         </div>
                         <div class="header-badges">
@@ -846,7 +880,7 @@
             function updateMachineCardElement(element, newData) {
                 const mainStatus = getMainStatus(newData);
                 const statusBadge = element.querySelector('.status-badge');
-                let statusClass = 'stopped', statusText = 'HD OFF';
+                let statusClass = 'stopped', statusText = 'IDLE';
                 if (mainStatus === 'running') { statusClass = 'running'; statusText = 'HD ON'; }
                 else if (mainStatus === 'treatment') { statusClass = 'treatment'; statusText = 'TREATMENT'; }
                 else if (mainStatus === 'maintenance') { statusClass = 'maintenance'; statusText = 'MAINTENANCE'; }
@@ -870,14 +904,14 @@
                 element.querySelector('[data-field="lastUpdate"]').textContent = `Update: ${formatDateTime(newData.last_update)}`;
             }
 
-            function syncMachineGrid(rsName) {
-                const group = groupsCache[rsName];
-                if (!group) {
-                    machinesGridContainer.innerHTML = '<div class="empty-message">Tidak ada mesin di RS ini.</div>';
+            function syncMachineGrid(hospitalName) {
+                const hospData = regionGroups[selectedRegion]?.subregions[selectedSubregion]?.hospitals[hospitalName];
+                if (!hospData) {
+                    machinesGridContainer.innerHTML = '<div class="empty-message">Tidak ada mesin di rumah sakit ini.</div>';
                     return;
                 }
                 
-                const currentMachineIds = new Set(group.machines.map(m => m.machineId));
+                const currentMachineIds = new Set(hospData.machines.map(m => m.machineId));
                 
                 for (let [id, card] of machineCards) {
                     if (!currentMachineIds.has(id)) {
@@ -886,7 +920,7 @@
                     }
                 }
                 
-                group.machines.forEach(({ machineId, data, parsed }) => {
+                hospData.machines.forEach(({ machineId, data, parsed }) => {
                     const existing = machineCards.get(machineId);
                     if (existing) {
                         updateMachineCardElement(existing.element, data);
@@ -905,39 +939,117 @@
                 });
             }
 
-            // ---------- VIEW MANAGEMENT with loading ----------
-            function showHomeView() {
-                currentView = 'home';
-                selectedRS = null;
-                viewTitle.textContent = 'Ringkasan';
-                backButton.classList.add('hidden');
-                navHome.classList.add('active');
-                
-                // Sembunyikan dynamic content, tampilkan homeView
+            // ---------- VIEW MANAGEMENT ----------
+            function hideAllViews() {
+                regionView.classList.remove('active');
+                subregionView.classList.remove('active');
+                hospitalView.classList.remove('active');
+                machineView.classList.remove('active');
                 dynamicContent.style.display = 'none';
-                homeView.classList.add('active');
-                detailView.classList.remove('active');
-                
-                renderInsights(homeInsights, globalStats);
-                renderRSGrid();
             }
 
-            function showDetailView() {
-                if (!selectedRS) return;
-                currentView = 'detail';
-                viewTitle.textContent = selectedRS;
+            function updateBreadcrumb() {
+                let html = '';
+                if (currentView === 'region') {
+                    html = `<span>🏠 Nasional</span>`;
+                } else if (currentView === 'subregion') {
+                    html = `<span onclick="window.goToRegion()">🏠 Nasional</span> <i class="fas fa-chevron-right"></i> <span>${escapeHtml(selectedRegion)}</span>`;
+                } else if (currentView === 'hospital') {
+                    html = `<span onclick="window.goToRegion()">🏠 Nasional</span> <i class="fas fa-chevron-right"></i> <span onclick="window.goToSubregion()">${escapeHtml(selectedRegion)}</span> <i class="fas fa-chevron-right"></i> <span>${escapeHtml(selectedSubregion)}</span>`;
+                } else if (currentView === 'machine') {
+                    html = `<span onclick="window.goToRegion()">🏠 Nasional</span> <i class="fas fa-chevron-right"></i> <span onclick="window.goToSubregion()">${escapeHtml(selectedRegion)}</span> <i class="fas fa-chevron-right"></i> <span onclick="window.goToHospital()">${escapeHtml(selectedSubregion)}</span> <i class="fas fa-chevron-right"></i> <span>${escapeHtml(selectedHospital)}</span>`;
+                }
+                breadcrumb.innerHTML = html;
+            }
+
+            // Fungsi navigasi global (dipanggil dari breadcrumb)
+            window.goToRegion = function() {
+                selectedRegion = null;
+                selectedSubregion = null;
+                selectedHospital = null;
+                showRegionView();
+            };
+            window.goToSubregion = function() {
+                if (selectedRegion) {
+                    selectedSubregion = null;
+                    selectedHospital = null;
+                    showSubregionView();
+                }
+            };
+            window.goToHospital = function() {
+                if (selectedRegion && selectedSubregion) {
+                    selectedHospital = null;
+                    showHospitalView();
+                }
+            };
+
+            function showRegionView() {
+                currentView = 'region';
+                viewTitle.textContent = 'Ringkasan Nasional';
+                backButton.classList.add('hidden');
+                navHome.classList.add('active');
+                hideAllViews();
+                regionView.classList.add('active');
+                renderInsights(regionInsights, globalStats);
+                renderRegionCards();
+                updateBreadcrumb();
+            }
+
+            function showSubregionView() {
+                if (!selectedRegion) return;
+                currentView = 'subregion';
+                viewTitle.textContent = selectedRegion;
                 backButton.classList.remove('hidden');
                 navHome.classList.remove('active');
-                
-                dynamicContent.style.display = 'none';
-                homeView.classList.remove('active');
-                detailView.classList.add('active');
-                
-                const group = groupsCache[selectedRS] || { total:0, hdOn:0, treatment:0, maintenance:0 };
-                const stats = { total: group.total, hdOn: group.hdOn, treatment: group.treatment, maintenance: group.maintenance };
-                renderInsights(detailInsights, stats);
-                syncMachineGrid(selectedRS);
+                hideAllViews();
+                subregionView.classList.add('active');
+                const stats = regionGroups[selectedRegion]?.stats || { total:0, hdOn:0, treatment:0, maintenance:0 };
+                renderInsights(subregionInsights, stats);
+                renderSubregionCards();
+                updateBreadcrumb();
             }
+
+            function showHospitalView() {
+                if (!selectedRegion || !selectedSubregion) return;
+                currentView = 'hospital';
+                viewTitle.textContent = selectedSubregion;
+                backButton.classList.remove('hidden');
+                navHome.classList.remove('active');
+                hideAllViews();
+                hospitalView.classList.add('active');
+                const stats = regionGroups[selectedRegion]?.subregions[selectedSubregion]?.stats || { total:0, hdOn:0, treatment:0, maintenance:0 };
+                renderInsights(hospitalInsights, stats);
+                renderHospitalCards();
+                updateBreadcrumb();
+            }
+
+            function showMachineView() {
+                if (!selectedRegion || !selectedSubregion || !selectedHospital) return;
+                currentView = 'machine';
+                viewTitle.textContent = selectedHospital;
+                backButton.classList.remove('hidden');
+                navHome.classList.remove('active');
+                hideAllViews();
+                machineView.classList.add('active');
+                const stats = regionGroups[selectedRegion]?.subregions[selectedSubregion]?.hospitals[selectedHospital]?.stats || { total:0, hdOn:0, treatment:0, maintenance:0 };
+                renderInsights(machineInsights, stats);
+                syncMachineGrid(selectedHospital);
+                updateBreadcrumb();
+            }
+
+            // Back button handler
+            backButton.addEventListener('click', () => {
+                if (currentView === 'subregion') {
+                    goToRegion();
+                } else if (currentView === 'hospital') {
+                    goToSubregion();
+                } else if (currentView === 'machine') {
+                    goToHospital();
+                }
+            });
+
+            // Nav home
+            navHome.addEventListener('click', goToRegion);
 
             // ---------- MAINTENANCE MODAL ----------
             function showMaintenanceModal(machineId, items) {
@@ -992,12 +1104,19 @@
                 modal.style.display = 'block';
             }
 
-            // ---------- DATA FETCH dengan loading di dynamicContent ----------
+            function escapeHtml(str) {
+                return String(str).replace(/[&<>]/g, function(m) {
+                    if (m === '&') return '&amp;';
+                    if (m === '<') return '&lt;';
+                    if (m === '>') return '&gt;';
+                    return m;
+                });
+            }
+
+            // ---------- DATA FETCH ----------
             async function loadData() {
-                // Tampilkan dynamic content (loading), sembunyikan kedua view
                 dynamicContent.style.display = 'block';
-                homeView.classList.remove('active');
-                detailView.classList.remove('active');
+                hideAllViews();
                 dynamicContent.innerHTML = '<div class="empty-message">Memuat data...</div>';
                 
                 try {
@@ -1008,26 +1127,20 @@
                     machinesData = newData;
                     recomputeGroupsAndStats();
                     
-                    // Sembunyikan dynamic content, tampilkan view yang sesuai
                     dynamicContent.style.display = 'none';
-                    if (currentView === 'home') {
-                        showHomeView();
-                    } else if (currentView === 'detail' && selectedRS) {
-                        // pastikan detail view di-render ulang
-                        const group = groupsCache[selectedRS] || { total:0, hdOn:0, treatment:0, maintenance:0 };
-                        const stats = { total: group.total, hdOn: group.hdOn, treatment: group.treatment, maintenance: group.maintenance };
-                        renderInsights(detailInsights, stats);
-                        syncMachineGrid(selectedRS);
-                        detailView.classList.add('active');
-                        homeView.classList.remove('active');
-                        dynamicContent.style.display = 'none';
-                        viewTitle.textContent = selectedRS;
-                        backButton.classList.remove('hidden');
-                        navHome.classList.remove('active');
+                    
+                    // Tampilkan view sesuai currentView
+                    if (currentView === 'region') {
+                        showRegionView();
+                    } else if (currentView === 'subregion' && selectedRegion) {
+                        showSubregionView();
+                    } else if (currentView === 'hospital' && selectedRegion && selectedSubregion) {
+                        showHospitalView();
+                    } else if (currentView === 'machine' && selectedRegion && selectedSubregion && selectedHospital) {
+                        showMachineView();
                     } else {
-                        // fallback ke home
-                        currentView = 'home';
-                        showHomeView();
+                        // fallback
+                        goToRegion();
                     }
                 } catch (err) {
                     console.error('Load data error:', err);
@@ -1035,7 +1148,7 @@
                 }
             }
 
-            // ---------- TIMER (real-time update untuk durasi) ----------
+            // ---------- TIMER ----------
             function updateTimers() {
                 for (let [id, card] of machineCards) {
                     const data = card.data;
@@ -1061,20 +1174,9 @@
                 }
             }
 
-            // ---------- EVENT LISTENERS ----------
-            navHome.addEventListener('click', () => {
-                currentView = 'home';
-                selectedRS = null;
-                loadData(); // akan memuat ulang dan menampilkan home
-            });
-            backButton.addEventListener('click', () => {
-                currentView = 'home';
-                selectedRS = null;
-                loadData();
-            });
+            // ---------- INIT ----------
             refreshBtn.addEventListener('click', loadData);
             
-            // Inisialisasi awal
             (async () => {
                 await loadData();
             })();
