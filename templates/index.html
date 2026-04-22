@@ -676,7 +676,7 @@
                     const parsed = {
                         unit: m.unit_number,
                         hospitalName: m.hospital_name,
-                        sn: parseMachineId(id).sn  // ambil SN dari parsing ID
+                        //sn: parseMachineId(id).sn  // ambil SN dari parsing ID
                     };
                     hosp.machines.push({ machineId: id, data: m, parsed });
                 });
@@ -837,7 +837,7 @@
             
                 const unitText = data.unit_number ? `Unit ${data.unit_number}` : '';
                 const hospitalDisplay = data.hospital_name || 'Tanpa RS';
-                const snDisplay = parsed.sn || machineId;  // fallback ke machineId jika SN tidak ada
+                const snDisplay = data.serial_number || machineId;  // fallback ke machineId
             
                 div.innerHTML = `
                     <div class="machine-header">
@@ -1048,9 +1048,10 @@
             // ---------- MAINTENANCE MODAL ----------
             function showMaintenanceModal(machineId, items) {
                 const machine = machinesData[machineId];
+                modalMachineId.textContent = machine.serial_number || machineId;
                 if (!machine) return;
                 const parsed = parseMachineId(machineId);
-                modalMachineId.textContent = parsed.sn || machineId;
+                //modalMachineId.textContent = parsed.sn || machineId;
                 maintenanceList.innerHTML = '';
                 
                 if (!items || items.length === 0) {
