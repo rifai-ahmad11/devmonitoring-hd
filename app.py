@@ -13,6 +13,7 @@ app = Flask(__name__)
 app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'your_secret_key_here')
 
 LOGIN_PASSWORD = os.environ.get('DASHBOARD_PASSWORD', 'OJI2026!')
+ADMIN_PASSWORD = os.environ.get('ADMIN_PASSWORD', 'ADMIN2026!')  # Ganti di production!
 
 # Konfigurasi database
 DATABASE_URL = os.environ.get('DATABASE_URL', 'postgresql://postgres:fAfrLTxIvblQAiXDRvllRuJqiGgzYBvx@turntable.proxy.rlwy.net:29037/railway')
@@ -65,6 +66,27 @@ class Maintenance(Base):
         Index('idx_maintenance_timestamp', 'timestamp'),
     )
 
+class MachineMetadata(Base):
+    __tablename__ = 'machine_metadata'
+    machine_id = Column(String(50), ForeignKey('machines.machine_id'), primary_key=True)
+    model = Column(String(50))
+    hospital_name = Column(String(100), nullable=False)
+    unit_number = Column(Integer)
+    region = Column(String(50))
+    subregion = Column(String(50))
+    address = Column(Text)
+    registered_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    # Relationship (opsional)
+    machine = relationship("Machine", backref="metadata")
+
+    __table_args__ = (
+        Index('idx_metadata_region', 'region'),
+        Index('idx_metadata_subregion', 'subregion'),
+        Index('idx_metadata_hospital', 'hospital_name'),
+    )
+    
 # Buat tabel jika belum ada
 Base.metadata.create_all(bind=engine)
 
@@ -93,18 +115,17 @@ def stop_dialysis_session_db(machine: Machine, current_time: datetime):
         machine.dialysis_session_start = None
         machine.pump_status = 'stopped'
 
-# OPTIMASI: Fungsi baru untuk mengambil data semua mesin dalam 3 query saja
 def get_all_machines_data():
-    """
-    Mengembalikan dictionary dengan data semua mesin.
-    Hanya melakukan 3 query total, bukan 1 + 2N.
-    """
-    # Query 1: Ambil semua data mesin
-    machines = db_session.query(Machine).all()
-    if not machines:
+    # Query join machines dan metadata
+    query = db_session.query(Machine, MachineMetadata).outerjoin(
+        MachineMetadata, Machine.machine_id == MachineMetadata.machine_id
+    )
+    results = query.all()
+
+    if not results:
         return {}
 
-    # Query 2: Hitung error count per machine dalam satu query GROUP BY
+    # Query error count per machine (GROUP BY)
     error_counts = {}
     error_count_query = db_session.query(
         Error.machine_id, func.count(Error.id).label('count')
@@ -112,9 +133,7 @@ def get_all_machines_data():
     for row in error_count_query:
         error_counts[row.machine_id] = row.count
 
-    # Query 3: Ambil maintenance terakhir per (machine_id, item) menggunakan DISTINCT ON
-    # Kita gunakan subquery untuk mendapatkan baris terbaru per machine dan item
-    # Karena kita hanya butuh untuk item yang ada di MAINTENANCE_THRESHOLDS
+    # Query maintenance terakhir per item
     items = list(MAINTENANCE_THRESHOLDS.keys())
     last_maintenance_subq = (
         db_session.query(
@@ -135,20 +154,35 @@ def get_all_machines_data():
         last_maintenance_subq.c.item,
         last_maintenance_subq.c.dialysis_count
     ).filter(last_maintenance_subq.c.rn == 1).all()
-    
-    # Bangun dictionary untuk last maintenance: key = (machine_id, item) -> dialysis_count
+
     last_maintenance_dict = {}
     for row in last_maintenance_query:
         last_maintenance_dict[(row.machine_id, row.item)] = row.dialysis_count
 
-    # Siapkan hasil
     current_time = datetime.now()
     result = {}
-    for machine in machines:
+
+    for machine, metadata in results:
         machine_id = machine.machine_id
+
+        # Gunakan metadata jika ada, jika tidak fallback parsing
+        if metadata:
+            hospital_name = metadata.hospital_name
+            unit_number = metadata.unit_number
+            region = metadata.region
+            subregion = metadata.subregion
+            model = metadata.model
+        else:
+            fallback = parse_machine_id_fallback(machine_id)
+            hospital_name = fallback['hospital_name']
+            unit_number = fallback['unit_number']
+            region = None
+            subregion = None
+            model = fallback['model']
+
         error_count = error_counts.get(machine_id, 0)
-        
-        # Hitung maintenance required untuk mesin ini
+
+        # Hitung maintenance required
         maintenance_required = []
         completed_dialysis = machine.completed_dialysis
         for item, threshold in MAINTENANCE_THRESHOLDS.items():
@@ -162,15 +196,15 @@ def get_all_machines_data():
                     'treatments_since_last': completed_dialysis - last_dialysis,
                     'last_maintenance_treatment': last_dialysis
                 })
-        
-        # Hitung durasi sesi saat ini
+
+        # Durasi sesi saat ini
         current_session_duration = 0
         if machine.status == 'running' and machine.current_session_start:
             current_session_duration = (current_time - machine.current_session_start).total_seconds()
         current_dialysis_duration = 0
         if machine.pump_status == 'running' and machine.dialysis_session_start:
             current_dialysis_duration = (current_time - machine.dialysis_session_start).total_seconds()
-        
+
         result[machine_id] = {
             'machine_id': machine_id,
             'status': machine.status,
@@ -185,9 +219,43 @@ def get_all_machines_data():
             'pump_status': machine.pump_status,
             'total_dialysis_time': machine.total_dialysis_time,
             'completed_dialysis': machine.completed_dialysis,
-            'current_dialysis_duration': current_dialysis_duration
+            'current_dialysis_duration': current_dialysis_duration,
+            # Field tambahan dari metadata / fallback
+            'hospital_name': hospital_name,
+            'unit_number': unit_number,
+            'region': region,
+            'subregion': subregion,
+            'model': model
         }
+
     return result
+    
+def parse_machine_id_fallback(full_id: str):
+    """
+    Parsing machine_id format lama: [model]-[rs_name]_[unit]-[sn]
+    Mengembalikan dictionary dengan model, hospital_name, unit_number, sn
+    """
+    parts = full_id.split('-')
+    model = parts[0] if len(parts) > 0 else ''
+    rs_unit = parts[1] if len(parts) > 1 else ''
+    sn = parts[2] if len(parts) > 2 else ''
+
+    hospital_name = rs_unit
+    unit_number = None
+    # Cari underscore terakhir yang diikuti angka
+    last_underscore = rs_unit.rfind('_')
+    if last_underscore != -1:
+        possible_unit = rs_unit[last_underscore+1:]
+        if possible_unit.isdigit():
+            hospital_name = rs_unit[:last_underscore]
+            unit_number = int(possible_unit)
+
+    return {
+        'model': model,
+        'hospital_name': hospital_name or 'Unknown',
+        'unit_number': unit_number,
+        'sn': sn
+    }
 
 # Fungsi untuk single machine (masih dipakai untuk update individual jika diperlukan, tapi tidak dipakai di /api/machines)
 def get_single_machine_data(machine: Machine):
@@ -217,6 +285,14 @@ def login_required(f):
         return f(*args, **kwargs)
     return decorated_function
 
+def admin_required(f):
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if not session.get('is_admin'):
+            return redirect(url_for('admin_login'))
+        return f(*args, **kwargs)
+    return decorated_function
+
 # --- Route Halaman (tidak berubah) ---
 @app.route('/')
 @login_required
@@ -238,6 +314,26 @@ def login():
 def logout():
     session.pop('logged_in', None)
     return redirect(url_for('login'))
+
+@app.route('/admin/login', methods=['GET', 'POST'])
+def admin_login():
+    if request.method == 'POST':
+        if request.form.get('password') == ADMIN_PASSWORD:
+            session['is_admin'] = True
+            session['logged_in'] = True  # opsional
+            return redirect(url_for('admin_panel'))
+        return render_template('admin_login.html', error="Password salah")
+    return render_template('admin_login.html')
+
+@app.route('/admin/logout')
+def admin_logout():
+    session.pop('is_admin', None)
+    return redirect(url_for('admin_login'))
+
+@app.route('/admin')
+@admin_required
+def admin_panel():
+    return render_template('admin.html')
 
 # --- API Endpoints ---
 @app.route('/api/machines')
@@ -503,6 +599,156 @@ def check_machine_timeout():
         finally:
             # Pastikan session ditutup (scoped_session akan handle)
             db_session.remove()
+
+# --- Metadata Management (Admin) ---
+@app.route('/api/metadata', methods=['GET'])
+@admin_required
+def get_all_metadata():
+    """Mengembalikan semua metadata mesin."""
+    try:
+        metadata_list = db_session.query(MachineMetadata).all()
+        result = []
+        for m in metadata_list:
+            result.append({
+                'machine_id': m.machine_id,
+                'model': m.model,
+                'hospital_name': m.hospital_name,
+                'unit_number': m.unit_number,
+                'region': m.region,
+                'subregion': m.subregion,
+                'address': m.address,
+                'registered_at': m.registered_at.isoformat() if m.registered_at else None
+            })
+        return jsonify(result)
+    except Exception as e:
+        print(f"Error in /api/metadata GET: {e}")
+        traceback.print_exc()
+        return jsonify({'error': 'Internal server error'}), 500
+
+@app.route('/api/metadata/<machine_id>', methods=['GET'])
+@admin_required
+def get_metadata(machine_id):
+    """Mendapatkan metadata satu mesin."""
+    try:
+        metadata = db_session.get(MachineMetadata, machine_id)
+        if not metadata:
+            # Coba fallback parsing
+            fallback = parse_machine_id_fallback(machine_id)
+            return jsonify({
+                'machine_id': machine_id,
+                'model': fallback['model'],
+                'hospital_name': fallback['hospital_name'],
+                'unit_number': fallback['unit_number'],
+                'region': None,
+                'subregion': None,
+                'address': None,
+                'is_fallback': True
+            })
+        return jsonify({
+            'machine_id': metadata.machine_id,
+            'model': metadata.model,
+            'hospital_name': metadata.hospital_name,
+            'unit_number': metadata.unit_number,
+            'region': metadata.region,
+            'subregion': metadata.subregion,
+            'address': metadata.address,
+            'is_fallback': False
+        })
+    except Exception as e:
+        print(f"Error in /api/metadata GET: {e}")
+        traceback.print_exc()
+        return jsonify({'error': 'Internal server error'}), 500
+
+@app.route('/api/metadata', methods=['POST'])
+@admin_required
+def create_metadata():
+    """Membuat metadata baru untuk machine_id."""
+    try:
+        data = request.get_json()
+        machine_id = data.get('machine_id')
+        if not machine_id:
+            return jsonify({'error': 'machine_id required'}), 400
+
+        # Cek apakah mesin ada di tabel machines
+        machine = db_session.get(Machine, machine_id)
+        if not machine:
+            # Bisa dibuat otomatis mesin baru jika belum ada
+            machine = Machine(machine_id=machine_id)
+            db_session.add(machine)
+            db_session.flush()
+
+        existing = db_session.get(MachineMetadata, machine_id)
+        if existing:
+            return jsonify({'error': 'Metadata already exists, use PUT to update'}), 409
+
+        metadata = MachineMetadata(
+            machine_id=machine_id,
+            model=data.get('model'),
+            hospital_name=data.get('hospital_name', 'Unknown'),
+            unit_number=data.get('unit_number'),
+            region=data.get('region'),
+            subregion=data.get('subregion'),
+            address=data.get('address')
+        )
+        db_session.add(metadata)
+        db_session.commit()
+        return jsonify({'success': True, 'message': 'Metadata created'})
+    except Exception as e:
+        db_session.rollback()
+        print(f"Error creating metadata: {e}")
+        traceback.print_exc()
+        return jsonify({'error': 'Internal server error'}), 500
+
+@app.route('/api/metadata/<machine_id>', methods=['PUT'])
+@admin_required
+def update_metadata(machine_id):
+    """Update metadata mesin."""
+    try:
+        data = request.get_json()
+        metadata = db_session.get(MachineMetadata, machine_id)
+        if not metadata:
+            # Jika belum ada, buat baru
+            machine = db_session.get(Machine, machine_id)
+            if not machine:
+                machine = Machine(machine_id=machine_id)
+                db_session.add(machine)
+                db_session.flush()
+            metadata = MachineMetadata(machine_id=machine_id)
+            db_session.add(metadata)
+
+        metadata.model = data.get('model', metadata.model)
+        metadata.hospital_name = data.get('hospital_name', metadata.hospital_name)
+        metadata.unit_number = data.get('unit_number', metadata.unit_number)
+        metadata.region = data.get('region', metadata.region)
+        metadata.subregion = data.get('subregion', metadata.subregion)
+        metadata.address = data.get('address', metadata.address)
+        metadata.updated_at = datetime.utcnow()
+
+        db_session.commit()
+        return jsonify({'success': True, 'message': 'Metadata updated'})
+    except Exception as e:
+        db_session.rollback()
+        print(f"Error updating metadata: {e}")
+        traceback.print_exc()
+        return jsonify({'error': 'Internal server error'}), 500
+
+@app.route('/api/metadata/<machine_id>', methods=['DELETE'])
+@admin_required
+def delete_metadata(machine_id):
+    """Hapus metadata (mesin tetap ada)."""
+    try:
+        metadata = db_session.get(MachineMetadata, machine_id)
+        if metadata:
+            db_session.delete(metadata)
+            db_session.commit()
+            return jsonify({'success': True, 'message': 'Metadata deleted'})
+        else:
+            return jsonify({'error': 'Metadata not found'}), 404
+    except Exception as e:
+        db_session.rollback()
+        print(f"Error deleting metadata: {e}")
+        traceback.print_exc()
+        return jsonify({'error': 'Internal server error'}), 500
 
 # Mulai background threads
 timeout_thread = threading.Thread(target=check_machine_timeout, daemon=True)
