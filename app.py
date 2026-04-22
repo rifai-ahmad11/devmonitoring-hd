@@ -5,8 +5,8 @@ from functools import wraps
 import threading
 import time
 import traceback
-from sqlalchemy import create_engine, Column, String, Float, Integer, DateTime, Text, func, and_, desc, Index
-from sqlalchemy.orm import declarative_base, sessionmaker, scoped_session
+from sqlalchemy import create_engine, Column, String, Float, Integer, DateTime, Text, func, and_, desc, Index, ForeignKey
+from sqlalchemy.orm import declarative_base, sessionmaker, scoped_session, relationship
 
 # Inisialisasi Flask
 app = Flask(__name__)
