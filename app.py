@@ -69,7 +69,7 @@ class Maintenance(Base):
 class MachineMetadata(Base):
     __tablename__ = 'machine_metadata'
     machine_id = Column(String(50), ForeignKey('machines.machine_id'), primary_key=True)
-    model = Column(String(50))
+    serial_number = Column(String(50))                      # <-- Ganti dari model ke serial_number
     hospital_name = Column(String(100), nullable=False)
     unit_number = Column(Integer)
     region = Column(String(50))
@@ -78,7 +78,6 @@ class MachineMetadata(Base):
     registered_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
-    # Relationship (opsional)
     machine = relationship("Machine", backref="metadata")
 
     __table_args__ = (
@@ -171,14 +170,14 @@ def get_all_machines_data():
             unit_number = metadata.unit_number
             region = metadata.region
             subregion = metadata.subregion
-            model = metadata.model
+            serial_number = metadata.serial_number   # <-- ambil dari metadata
         else:
             fallback = parse_machine_id_fallback(machine_id)
             hospital_name = fallback['hospital_name']
             unit_number = fallback['unit_number']
             region = None
             subregion = None
-            model = fallback['model']
+            serial_number = fallback['sn']           # fallback ke SN hasil parsing
 
         error_count = error_counts.get(machine_id, 0)
 
@@ -225,7 +224,7 @@ def get_all_machines_data():
             'unit_number': unit_number,
             'region': region,
             'subregion': subregion,
-            'model': model
+            'serial_number': serial_number,
         }
 
     return result
@@ -251,10 +250,11 @@ def parse_machine_id_fallback(full_id: str):
             unit_number = int(possible_unit)
 
     return {
-        'model': model,
+        'model': model,          # bisa diabaikan
         'hospital_name': hospital_name or 'Unknown',
         'unit_number': unit_number,
-        'sn': sn
+        'sn': sn,                # SN dari parsing ID
+        'serial_number': sn      # sebagai fallback
     }
 
 # Fungsi untuk single machine (masih dipakai untuk update individual jika diperlukan, tapi tidak dipakai di /api/machines)
@@ -611,7 +611,7 @@ def get_all_metadata():
         for m in metadata_list:
             result.append({
                 'machine_id': m.machine_id,
-                'model': m.model,
+                'serial_number': m.serial_number,
                 'hospital_name': m.hospital_name,
                 'unit_number': m.unit_number,
                 'region': m.region,
@@ -636,7 +636,7 @@ def get_metadata(machine_id):
             fallback = parse_machine_id_fallback(machine_id)
             return jsonify({
                 'machine_id': machine_id,
-                'model': fallback['model'],
+                'serial_number': fallback['serial_number'],
                 'hospital_name': fallback['hospital_name'],
                 'unit_number': fallback['unit_number'],
                 'region': None,
@@ -646,7 +646,7 @@ def get_metadata(machine_id):
             })
         return jsonify({
             'machine_id': metadata.machine_id,
-            'model': metadata.model,
+            'serial_number': metadata.serial_number,
             'hospital_name': metadata.hospital_name,
             'unit_number': metadata.unit_number,
             'region': metadata.region,
@@ -683,7 +683,7 @@ def create_metadata():
 
         metadata = MachineMetadata(
             machine_id=machine_id,
-            model=data.get('model'),
+            serial_number=data.get('serial_number'),
             hospital_name=data.get('hospital_name', 'Unknown'),
             unit_number=data.get('unit_number'),
             region=data.get('region'),
@@ -716,7 +716,7 @@ def update_metadata(machine_id):
             metadata = MachineMetadata(machine_id=machine_id)
             db_session.add(metadata)
 
-        metadata.model = data.get('model', metadata.model)
+        metadata.serial_number = data.get('serial_number', metadata.serial_number)
         metadata.hospital_name = data.get('hospital_name', metadata.hospital_name)
         metadata.unit_number = data.get('unit_number', metadata.unit_number)
         metadata.region = data.get('region', metadata.region)
