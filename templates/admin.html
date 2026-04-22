@@ -183,9 +183,9 @@
             </h2>
             <div class="form-grid">
                 <input type="text" id="adminMachineId" placeholder="Machine ID *" required>
-                <input type="text" id="adminModel" placeholder="Model (opsional)">
+                <input type="text" id="adminSerialNumber" placeholder="Serial Number *" required>
                 <input type="text" id="adminHospitalName" placeholder="Nama RS/Klinik *" required>
-                <input type="number" id="adminUnitNumber" placeholder="Nomor Unit (opsional)">
+                <input type="number" id="adminUnitNumber" placeholder="Nomor Unit *" required>
                 <input type="text" id="adminRegion" placeholder="Region (contoh: Jawa Barat)">
                 <input type="text" id="adminSubregion" placeholder="Subregion (contoh: Bandung)">
                 <input type="text" id="adminAddress" placeholder="Alamat lengkap" style="grid-column: span 2;">
@@ -207,6 +207,7 @@
                 <thead>
                     <tr>
                         <th>Machine ID</th>
+                        <th>Serial Number</th>
                         <th>Nama RS</th>
                         <th>Unit</th>
                         <th>Region</th>
@@ -254,6 +255,7 @@
                         const row = document.createElement('tr');
                         row.innerHTML = `
                             <td><code>${escapeHtml(item.machine_id)}</code></td>
+                            <td>${escapeHtml(item.serial_number || '-')}</td>
                             <td>${escapeHtml(item.hospital_name)}</td>
                             <td>${item.unit_number || '-'}</td>
                             <td>${escapeHtml(item.region || '-')}</td>
@@ -288,7 +290,7 @@
                             const data = await res.json();
                             
                             document.getElementById('adminMachineId').value = data.machine_id;
-                            document.getElementById('adminModel').value = data.model || '';
+                            document.getElementById('adminSerialNumber').value = data.serial_number || '';
                             document.getElementById('adminHospitalName').value = data.hospital_name || '';
                             document.getElementById('adminUnitNumber').value = data.unit_number || '';
                             document.getElementById('adminRegion').value = data.region || '';
@@ -340,7 +342,7 @@
 
                 const payload = {
                     machine_id: machineId,
-                    model: document.getElementById('adminModel').value.trim() || null,
+                    serial_number: document.getElementById('adminSerialNumber').value.trim() || null,
                     hospital_name: hospitalName,
                     unit_number: document.getElementById('adminUnitNumber').value ? parseInt(document.getElementById('adminUnitNumber').value) : null,
                     region: document.getElementById('adminRegion').value.trim() || null,
@@ -374,7 +376,7 @@
             });
 
             function clearForm() {
-                document.querySelectorAll('#adminMachineId, #adminModel, #adminHospitalName, #adminUnitNumber, #adminRegion, #adminSubregion, #adminAddress').forEach(i => i.value = '');
+                document.querySelectorAll('#adminMachineId, #adminSerialNumber, #adminHospitalName, #adminUnitNumber, #adminRegion, #adminSubregion, #adminAddress').forEach(i => i.value = '');
             }
 
             document.getElementById('clearFormBtn').addEventListener('click', clearForm);
