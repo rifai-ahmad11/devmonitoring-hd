@@ -533,17 +533,7 @@
         (function(){
             // ---------- REGION MAPPING (OPSI A) ----------
             // Pemetaan nama RS (hasil parsing) ke region dan subregion
-            const REGION_MAPPING = {
-                "Klinik HD Avio": { region: "Jabodetabek", subregion: "Tangerang" },
-                "RS Harapan Kita": { region: "DKI Jakarta", subregion: "Jakarta Barat" },
-                "RS Bhakti Kartini": { region: "Jabodetabek", subregion: "Bekasi" },
-                "RS Hasan Sadikin": { region: "Jawa Barat", subregion: "Bandung" },
-                "RSUD Cimacan": { region: "Jawa Barat", subregion: "Cianjur" },
-                "RSUD Dr. Soetomo": { region: "Jawa Timur", subregion: "Surabaya" },
-                "RS Pondok Indah": { region: "DKI Jakarta", subregion: "Jakarta Selatan" },
-                // Tambahkan mapping lainnya sesuai kebutuhan
-                "Default": { region: "Lainnya", subregion: "Tidak Diketahui" }
-            };
+           
 
             // ---------- STATE MANAGEMENT ----------
             let machinesData = {};
@@ -636,25 +626,20 @@
 
             // ---------- GROUPING & STATS BERDASARKAN REGION MAPPING ----------
             function recomputeGroupsAndStats() {
-                // Reset struktur
                 regionGroups = {};
                 globalStats = { total:0, hdOn:0, treatment:0, maintenance:0 };
-                
+            
                 Object.entries(machinesData).forEach(([id, m]) => {
-                    const parsed = parseMachineId(id);
-                    const rsName = parsed.rsName;
-                    
-                    // Ambil region/subregion dari mapping, fallback ke Default
-                    const mapping = REGION_MAPPING[rsName] || REGION_MAPPING['Default'];
-                    const region = mapping.region;
-                    const subregion = mapping.subregion;
-                    
+                    const region = m.region || 'Lainnya';
+                    const subregion = m.subregion || 'Tidak Diketahui';
+                    const hospitalName = m.hospital_name || 'Tanpa RS';
+            
                     // Update global stats
                     globalStats.total++;
                     if (m.status === 'running') globalStats.hdOn++;
                     if (m.pump_status === 'running') globalStats.treatment++;
                     if (m.maintenance_count > 0) globalStats.maintenance++;
-                    
+            
                     // Struktur region -> subregion -> hospital -> machines
                     if (!regionGroups[region]) {
                         regionGroups[region] = { subregions: {}, stats: { total:0, hdOn:0, treatment:0, maintenance:0 } };
@@ -663,7 +648,7 @@
                     if (m.status === 'running') regionGroups[region].stats.hdOn++;
                     if (m.pump_status === 'running') regionGroups[region].stats.treatment++;
                     if (m.maintenance_count > 0) regionGroups[region].stats.maintenance++;
-                    
+            
                     if (!regionGroups[region].subregions[subregion]) {
                         regionGroups[region].subregions[subregion] = { 
                             hospitals: {}, 
@@ -674,22 +659,29 @@
                     if (m.status === 'running') regionGroups[region].subregions[subregion].stats.hdOn++;
                     if (m.pump_status === 'running') regionGroups[region].subregions[subregion].stats.treatment++;
                     if (m.maintenance_count > 0) regionGroups[region].subregions[subregion].stats.maintenance++;
-                    
-                    if (!regionGroups[region].subregions[subregion].hospitals[rsName]) {
-                        regionGroups[region].subregions[subregion].hospitals[rsName] = {
+            
+                    if (!regionGroups[region].subregions[subregion].hospitals[hospitalName]) {
+                        regionGroups[region].subregions[subregion].hospitals[hospitalName] = {
                             machines: [],
                             stats: { total:0, hdOn:0, treatment:0, maintenance:0 }
                         };
                     }
-                    const hosp = regionGroups[region].subregions[subregion].hospitals[rsName];
+                    const hosp = regionGroups[region].subregions[subregion].hospitals[hospitalName];
                     hosp.stats.total++;
                     if (m.status === 'running') hosp.stats.hdOn++;
                     if (m.pump_status === 'running') hosp.stats.treatment++;
                     if (m.maintenance_count > 0) hosp.stats.maintenance++;
+            
+                    // Buat objek parsed sederhana untuk keperluan tampilan
+                    const parsed = {
+                        unit: m.unit_number,
+                        hospitalName: m.hospital_name,
+                        sn: parseMachineId(id).sn  // ambil SN dari parsing ID
+                    };
                     hosp.machines.push({ machineId: id, data: m, parsed });
                 });
             }
-
+            
             // ---------- INSIGHTS RENDERING (Donut) ----------
             function createInsightCard(title, value, percent) {
                 const card = document.createElement('div');
@@ -836,21 +828,23 @@
                 const div = document.createElement('div');
                 div.className = 'machine-card';
                 div.dataset.machineId = machineId;
-                
+            
                 const mainStatus = getMainStatus(data);
                 let statusClass = 'stopped', statusText = 'HD OFF';
                 if (mainStatus === 'running') { statusClass = 'running'; statusText = 'HD ON'; }
                 else if (mainStatus === 'treatment') { statusClass = 'treatment'; statusText = 'TREATMENT'; }
                 else if (mainStatus === 'maintenance') { statusClass = 'maintenance'; statusText = 'MAINTENANCE'; }
-                
-                const unitText = parsed.unit ? ` Unit ${parsed.unit}` : '';
-                
+            
+                const unitText = data.unit_number ? `Unit ${data.unit_number}` : '';
+                const hospitalDisplay = data.hospital_name || 'Tanpa RS';
+                const snDisplay = parsed.sn || machineId;  // fallback ke machineId jika SN tidak ada
+            
                 div.innerHTML = `
                     <div class="machine-header">
                         <div class="machine-id-section">
                             <div class="machine-main-id">${escapeHtml(unitText)}</div>
-                            <div class="machine-sub">${escapeHtml(parsed.rsName)}</div>
-                            <div class="machine-sn">SN: ${escapeHtml(parsed.sn || '')}</div>
+                            <div class="machine-sub">${escapeHtml(hospitalDisplay)}</div>
+                            <div class="machine-sn">SN: ${escapeHtml(snDisplay)}</div>
                         </div>
                         <div class="header-badges">
                             <span class="maintenance-badge" style="display: ${data.maintenance_count > 0 ? 'inline-block' : 'none'};" data-machine="${machineId}">⚠️ ${data.maintenance_count}</span>
@@ -867,13 +861,13 @@
                     </div>
                     <div class="last-update" data-field="lastUpdate">Update: ${formatDateTime(data.last_update)}</div>
                 `;
-                
+            
                 const badge = div.querySelector('.maintenance-badge');
                 badge.addEventListener('click', (e) => {
                     e.stopPropagation();
                     showMaintenanceModal(machineId, data.maintenance_required || []);
                 });
-                
+            
                 return div;
             }
 
