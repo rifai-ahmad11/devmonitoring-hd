@@ -389,7 +389,9 @@ def get_machines():
         # ... (proses seperti di get_all_machines_data, tapi pakai results)
         # ...
     except Exception as e:
-        # error handling
+        print(f"Error in /api/machines: {e}")
+        traceback.print_exc()
+        return jsonify({'error': 'Internal server error'}), 500
 
 # Endpoint lain (error-log, update, pump-status, maintenance-done, delete-machine) tetap sama seperti sebelumnya
 # Saya tidak mengubahnya karena tidak relevan dengan bottleneck.
