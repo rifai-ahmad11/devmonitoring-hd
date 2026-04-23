@@ -7,6 +7,8 @@ import time
 import traceback
 from sqlalchemy import create_engine, Column, String, Float, Integer, DateTime, Text, func, and_, desc, Index, ForeignKey
 from sqlalchemy.orm import declarative_base, sessionmaker, scoped_session, relationship
+from werkzeug.security import generate_password_hash, check_password_hash
+from sqlalchemy import ARRAY
 
 # Inisialisasi Flask
 app = Flask(__name__)
@@ -52,6 +54,15 @@ class Error(Base):
         Index('idx_errors_machine_id', 'machine_id'),
     )
 
+class User(Base):
+    __tablename__ = 'users'
+    id = Column(Integer, primary_key=True)
+    username = Column(String(50), unique=True, nullable=False)
+    password_hash = Column(String(255), nullable=False)
+    role = Column(String(20), nullable=False)
+    assigned_regions = Column(ARRAY(String), default=[])
+    created_at = Column(DateTime, default=datetime.utcnow)
+
 class Maintenance(Base):
     __tablename__ = 'maintenance'
     id = Column(Integer, primary_key=True)
@@ -60,7 +71,9 @@ class Maintenance(Base):
     dialysis_count = Column(Integer)
     timestamp = Column(DateTime, default=datetime.now)
     description = Column(Text)
-    # OPTIMASI: Indeks composite untuk mempercepat pencarian last maintenance per machine & item
+    performed_by = Column(Integer, ForeignKey('users.id'), nullable=True)
+
+    # Indeks
     __table_args__ = (
         Index('idx_maintenance_machine_item', 'machine_id', 'item'),
         Index('idx_maintenance_timestamp', 'timestamp'),
@@ -289,19 +302,21 @@ def get_single_machine_data(machine: Machine):
 # --- Decorator untuk login (tidak berubah) ---
 def login_required(f):
     @wraps(f)
-    def decorated_function(*args, **kwargs):
-        if not session.get('logged_in'):
+    def decorated(*args, **kwargs):
+        if 'user_id' not in session:
             return redirect(url_for('login'))
         return f(*args, **kwargs)
-    return decorated_function
+    return decorated
 
 def admin_required(f):
     @wraps(f)
-    def decorated_function(*args, **kwargs):
-        if not session.get('is_admin'):
-            return redirect(url_for('admin_login'))
+    def decorated(*args, **kwargs):
+        if session.get('role') != 'admin':
+            return redirect(url_for('dashboard'))  # atau forbidden
         return f(*args, **kwargs)
-    return decorated_function
+    return decorated
+    
+
 
 # --- Route Halaman (tidak berubah) ---
 @app.route('/')
@@ -312,17 +327,23 @@ def index():
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     if request.method == 'POST':
+        username = request.form.get('username')
         password = request.form.get('password')
-        if password == LOGIN_PASSWORD:
+        user = db_session.query(User).filter_by(username=username).first()
+        if user and check_password_hash(user.password_hash, password):
+            session['user_id'] = user.id
+            session['username'] = user.username
+            session['role'] = user.role
+            session['assigned_regions'] = user.assigned_regions if user.role == 'teknisi' else []
             session['logged_in'] = True
             return redirect(url_for('index'))
         else:
-            return render_template('login.html', error="Password salah")
+            return render_template('login.html', error="Username atau password salah")
     return render_template('login.html')
 
 @app.route('/logout')
 def logout():
-    session.pop('logged_in', None)
+    session.clear()
     return redirect(url_for('login'))
 
 @app.route('/admin/login', methods=['GET', 'POST'])
@@ -345,18 +366,30 @@ def admin_logout():
 def admin_panel():
     return render_template('admin.html')
 
-# --- API Endpoints ---
+
 @app.route('/api/machines')
+@login_required
 def get_machines():
-    """Mengembalikan data semua machine dalam bentuk JSON (dioptimasi)."""
     try:
-        # OPTIMASI: Panggil fungsi batch yang hanya melakukan 3 query
-        result = get_all_machines_data()
-        return jsonify(result)
+        if session.get('role') == 'teknisi':
+            allowed_regions = session.get('assigned_regions', [])
+            if not allowed_regions:
+                # Jika teknisi tidak punya region, kembalikan kosong
+                return jsonify({})
+            # Query dengan filter region
+            query = db_session.query(Machine, MachineMetadata).outerjoin(
+                MachineMetadata, Machine.machine_id == MachineMetadata.machine_id
+            ).filter(MachineMetadata.region.in_(allowed_regions))
+        else:
+            # Admin: semua mesin
+            query = db_session.query(Machine, MachineMetadata).outerjoin(
+                MachineMetadata, Machine.machine_id == MachineMetadata.machine_id
+            )
+        results = query.all()
+        # ... (proses seperti di get_all_machines_data, tapi pakai results)
+        # ...
     except Exception as e:
-        print(f"Error in /api/machines: {e}")
-        traceback.print_exc()
-        return jsonify({'error': 'Internal server error'}), 500
+        # error handling
 
 # Endpoint lain (error-log, update, pump-status, maintenance-done, delete-machine) tetap sama seperti sebelumnya
 # Saya tidak mengubahnya karena tidak relevan dengan bottleneck.
@@ -537,7 +570,7 @@ def mark_maintenance_done():
             item=maintenance_item,
             dialysis_count=machine.completed_dialysis,
             description=f'Maintenance {get_maintenance_name(maintenance_item)} dilakukan',
-            timestamp=datetime.now()
+            performed_by=session.get('user_id')
         )
         db_session.add(maintenance_record)
         db_session.commit()
@@ -761,6 +794,28 @@ def delete_metadata(machine_id):
         print(f"Error deleting metadata: {e}")
         traceback.print_exc()
         return jsonify({'error': 'Internal server error'}), 500
+
+@app.route('/admin/users', methods=['GET'])
+@admin_required
+def list_users():
+    users = db_session.query(User).all()
+    return render_template('admin_users.html', users=users)
+
+@app.route('/admin/users', methods=['POST'])
+@admin_required
+def create_user():
+    data = request.form
+    hashed = generate_password_hash(data['password'])
+    regions = [r.strip() for r in data.get('regions', '').split(',') if r.strip()]
+    new_user = User(
+        username=data['username'],
+        password_hash=hashed,
+        role=data['role'],
+        assigned_regions=regions
+    )
+    db_session.add(new_user)
+    db_session.commit()
+    return redirect(url_for('list_users'))
 
 # Mulai background threads
 timeout_thread = threading.Thread(target=check_machine_timeout, daemon=True)
