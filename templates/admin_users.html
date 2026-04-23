@@ -1,0 +1,448 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Manajemen User - HD Monitoring</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 30px;
+            color: #1e1e2f;
+        }
+        .admin-container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+        .admin-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 30px;
+            color: white;
+        }
+        .admin-header h1 {
+            font-size: 32px;
+            font-weight: 600;
+            text-shadow: 2px 2px 6px rgba(0,0,0,0.2);
+        }
+        .admin-header i {
+            margin-right: 10px;
+        }
+        .header-actions {
+            display: flex;
+            gap: 15px;
+        }
+        .btn {
+            background: rgba(255, 255, 255, 0.2);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            color: white;
+            padding: 10px 20px;
+            border-radius: 30px;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            transition: all 0.2s;
+            backdrop-filter: blur(4px);
+            text-decoration: none;
+        }
+        .btn:hover {
+            background: rgba(255, 255, 255, 0.4);
+        }
+        .btn-danger {
+            background: rgba(220, 53, 69, 0.8);
+        }
+        .btn-danger:hover {
+            background: rgba(220, 53, 69, 1);
+        }
+        .card {
+            background: white;
+            padding: 25px;
+            border-radius: 20px;
+            box-shadow: 0 15px 30px rgba(0,0,0,0.2);
+            color: #333;
+            margin-bottom: 30px;
+        }
+        .section-title {
+            font-size: 22px;
+            font-weight: 600;
+            color: white;
+            text-shadow: 1px 1px 4px rgba(0,0,0,0.2);
+            margin-bottom: 20px;
+        }
+        .form-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+        .form-grid input, .form-grid select {
+            padding: 12px 15px;
+            border: 1px solid #ddd;
+            border-radius: 10px;
+            font-size: 14px;
+            transition: border 0.2s;
+        }
+        .form-grid input:focus, .form-grid select:focus {
+            outline: none;
+            border-color: #4a90e2;
+        }
+        .full-width {
+            grid-column: span 2;
+        }
+        .btn-primary {
+            background: #4caf50;
+            color: white;
+            border: none;
+            padding: 12px 25px;
+            border-radius: 30px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        .btn-primary:hover {
+            background: #45a049;
+        }
+        .btn-secondary {
+            background: #f0f0f0;
+            color: #333;
+            border: none;
+            padding: 8px 15px;
+            border-radius: 20px;
+            cursor: pointer;
+            margin-right: 5px;
+        }
+        .btn-delete {
+            background: #f44336;
+            color: white;
+            border: none;
+            padding: 8px 15px;
+            border-radius: 20px;
+            cursor: pointer;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+            background: white;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        }
+        th {
+            background: #f8f9fa;
+            padding: 15px;
+            text-align: left;
+            font-weight: 600;
+            color: #1e3a6f;
+            border-bottom: 2px solid #e0e0e0;
+        }
+        td {
+            padding: 12px 15px;
+            border-bottom: 1px solid #eee;
+        }
+        tr:hover {
+            background: #fafafa;
+        }
+        .role-badge {
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+        .role-admin {
+            background: #4a90e2;
+            color: white;
+        }
+        .role-teknisi {
+            background: #f39c12;
+            color: white;
+        }
+        .region-tags {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 5px;
+        }
+        .region-tag {
+            background: #e9ecef;
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-size: 12px;
+        }
+        .loading-message {
+            text-align: center;
+            padding: 40px;
+            color: #666;
+        }
+        .empty-message {
+            text-align: center;
+            padding: 40px;
+            color: #999;
+        }
+        .error-message {
+            color: #dc3545;
+            margin-top: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="admin-container">
+        <!-- Header -->
+        <div class="admin-header">
+            <h1><i class="fas fa-users-cog"></i> Manajemen Pengguna</h1>
+            <div class="header-actions">
+                <a href="/" class="btn"><i class="fas fa-tachometer-alt"></i> Dashboard</a>
+                <a href="/admin" class="btn"><i class="fas fa-database"></i> Metadata</a>
+                <a href="/logout" class="btn btn-danger"><i class="fas fa-sign-out-alt"></i> Logout</a>
+            </div>
+        </div>
+
+        <!-- Form Tambah/Edit User -->
+        <div class="card">
+            <h2 style="margin-bottom: 20px; color: #1e3a6f;">
+                <i class="fas fa-user-plus"></i> <span id="formTitle">Tambah Pengguna</span>
+            </h2>
+            <div class="form-grid">
+                <input type="text" id="username" placeholder="Username *" required>
+                <input type="password" id="password" placeholder="Password *" required>
+                <select id="role" required>
+                    <option value="">Pilih Role *</option>
+                    <option value="teknisi">Teknisi</option>
+                    <option value="admin">Admin</option>
+                </select>
+                <input type="text" id="regions" placeholder="Region (pisahkan dengan koma) *">
+            </div>
+            <div style="display: flex; gap: 15px;">
+                <button id="saveBtn" class="btn-primary"><i class="fas fa-save"></i> Simpan</button>
+                <button id="cancelBtn" class="btn-secondary" style="display: none;"><i class="fas fa-times"></i> Batal</button>
+            </div>
+            <div id="formError" class="error-message"></div>
+        </div>
+
+        <!-- Daftar User -->
+        <div class="section-title">
+            <i class="fas fa-list"></i> Daftar Pengguna
+        </div>
+        <div class="card" style="padding: 0; overflow-x: auto;">
+            <table id="userTable">
+                <thead>
+                    <tr>
+                        <th>Username</th>
+                        <th>Role</th>
+                        <th>Region Akses</th>
+                        <th style="width: 180px;">Aksi</th>
+                    </tr>
+                </thead>
+                <tbody id="userTableBody">
+                    <tr><td colspan="4" class="loading-message">Memuat data...</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <script>
+        (function() {
+            // State untuk edit
+            let editingUserId = null;
+
+            // Helper escape HTML
+            function escapeHtml(str) {
+                if (!str) return '';
+                return String(str)
+                    .replace(/&/g, '&amp;')
+                    .replace(/</g, '&lt;')
+                    .replace(/>/g, '&gt;')
+                    .replace(/"/g, '&quot;')
+                    .replace(/'/g, '&#039;');
+            }
+
+            // Load user list
+            async function loadUsers() {
+                const tbody = document.getElementById('userTableBody');
+                tbody.innerHTML = '<tr><td colspan="4" class="loading-message">Memuat data...</td></tr>';
+                
+                try {
+                    const res = await fetch('/admin/api/users');
+                    if (!res.ok) throw new Error('Gagal memuat data');
+                    const users = await res.json();
+                    
+                    if (users.length === 0) {
+                        tbody.innerHTML = '<tr><td colspan="4" class="empty-message">Belum ada pengguna.</td></tr>';
+                        return;
+                    }
+                    
+                    tbody.innerHTML = '';
+                    users.forEach(user => {
+                        const row = document.createElement('tr');
+                        
+                        // Format regions
+                        const regions = user.assigned_regions || [];
+                        const regionTags = regions.map(r => `<span class="region-tag">${escapeHtml(r)}</span>`).join('');
+                        
+                        row.innerHTML = `
+                            <td><strong>${escapeHtml(user.username)}</strong></td>
+                            <td><span class="role-badge role-${user.role}">${user.role}</span></td>
+                            <td><div class="region-tags">${regionTags || '-'}</div></td>
+                            <td>
+                                <button class="btn-secondary edit-btn" data-id="${user.id}">
+                                    <i class="fas fa-edit"></i> Edit
+                                </button>
+                                <button class="btn-delete delete-btn" data-id="${user.id}">
+                                    <i class="fas fa-trash"></i> Hapus
+                                </button>
+                            </td>
+                        `;
+                        tbody.appendChild(row);
+                    });
+                    
+                    attachTableEvents();
+                } catch (err) {
+                    console.error(err);
+                    tbody.innerHTML = '<tr><td colspan="4" class="empty-message">Gagal memuat data. Periksa koneksi.</td></tr>';
+                }
+            }
+
+            function attachTableEvents() {
+                // Edit buttons
+                document.querySelectorAll('.edit-btn').forEach(btn => {
+                    btn.addEventListener('click', async () => {
+                        const id = btn.dataset.id;
+                        try {
+                            const res = await fetch(`/admin/api/users/${id}`);
+                            if (!res.ok) throw new Error('Gagal ambil detail');
+                            const user = await res.json();
+                            
+                            document.getElementById('username').value = user.username;
+                            document.getElementById('password').value = ''; // Tidak menampilkan password
+                            document.getElementById('password').placeholder = 'Kosongkan jika tidak ingin mengubah';
+                            document.getElementById('role').value = user.role;
+                            document.getElementById('regions').value = (user.assigned_regions || []).join(', ');
+                            
+                            editingUserId = user.id;
+                            document.getElementById('formTitle').innerHTML = '<i class="fas fa-user-edit"></i> Edit Pengguna';
+                            document.getElementById('saveBtn').innerHTML = '<i class="fas fa-save"></i> Update';
+                            document.getElementById('cancelBtn').style.display = 'inline-block';
+                            
+                            // Scroll ke form
+                            document.querySelector('.card').scrollIntoView({ behavior: 'smooth' });
+                        } catch (err) {
+                            alert('Gagal mengambil data user.');
+                        }
+                    });
+                });
+
+                // Delete buttons
+                document.querySelectorAll('.delete-btn').forEach(btn => {
+                    btn.addEventListener('click', async () => {
+                        if (!confirm('Yakin ingin menghapus pengguna ini?')) return;
+                        const id = btn.dataset.id;
+                        try {
+                            const res = await fetch(`/admin/api/users/${id}`, { method: 'DELETE' });
+                            if (res.ok) {
+                                alert('Pengguna berhasil dihapus.');
+                                loadUsers();
+                            } else {
+                                const err = await res.json();
+                                alert('Gagal: ' + (err.error || 'Unknown error'));
+                            }
+                        } catch (err) {
+                            alert('Gagal menghapus pengguna.');
+                        }
+                    });
+                });
+            }
+
+            // Reset form ke mode tambah
+            function resetForm() {
+                document.getElementById('username').value = '';
+                document.getElementById('password').value = '';
+                document.getElementById('password').placeholder = 'Password *';
+                document.getElementById('role').value = '';
+                document.getElementById('regions').value = '';
+                editingUserId = null;
+                document.getElementById('formTitle').innerHTML = '<i class="fas fa-user-plus"></i> Tambah Pengguna';
+                document.getElementById('saveBtn').innerHTML = '<i class="fas fa-save"></i> Simpan';
+                document.getElementById('cancelBtn').style.display = 'none';
+                document.getElementById('formError').textContent = '';
+            }
+
+            // Save user (POST/PUT)
+            document.getElementById('saveBtn').addEventListener('click', async () => {
+                const username = document.getElementById('username').value.trim();
+                const password = document.getElementById('password').value;
+                const role = document.getElementById('role').value;
+                const regionsInput = document.getElementById('regions').value.trim();
+                
+                // Validasi
+                if (!username) {
+                    document.getElementById('formError').textContent = 'Username harus diisi.';
+                    return;
+                }
+                if (!editingUserId && !password) {
+                    document.getElementById('formError').textContent = 'Password harus diisi.';
+                    return;
+                }
+                if (!role) {
+                    document.getElementById('formError').textContent = 'Role harus dipilih.';
+                    return;
+                }
+                if (role === 'teknisi' && !regionsInput) {
+                    document.getElementById('formError').textContent = 'Teknisi harus memiliki minimal satu region.';
+                    return;
+                }
+
+                // Parse regions
+                let regions = [];
+                if (regionsInput) {
+                    regions = regionsInput.split(',').map(s => s.trim()).filter(s => s !== '');
+                }
+
+                const payload = {
+                    username: username,
+                    role: role,
+                    assigned_regions: regions
+                };
+                if (password) {
+                    payload.password = password;
+                }
+
+                try {
+                    const url = editingUserId ? `/admin/api/users/${editingUserId}` : '/admin/api/users';
+                    const method = editingUserId ? 'PUT' : 'POST';
+                    
+                    const res = await fetch(url, {
+                        method: method,
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload)
+                    });
+
+                    if (res.ok) {
+                        alert(editingUserId ? 'Pengguna berhasil diperbarui.' : 'Pengguna baru berhasil ditambahkan.');
+                        resetForm();
+                        loadUsers();
+                    } else {
+                        const err = await res.json();
+                        document.getElementById('formError').textContent = err.error || 'Gagal menyimpan data.';
+                    }
+                } catch (err) {
+                    document.getElementById('formError').textContent = 'Gagal terhubung ke server.';
+                }
+            });
+
+            document.getElementById('cancelBtn').addEventListener('click', resetForm);
+
+            // Load data saat halaman dimuat
+            loadUsers();
+        })();
+    </script>
+</body>
+</html>
