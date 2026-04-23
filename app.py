@@ -257,6 +257,16 @@ def parse_machine_id_fallback(full_id: str):
         'serial_number': sn      # sebagai fallback
     }
 
+def normalize_machine_id(raw_id: str) -> str:
+    """
+    Jika ID mengandung '-', ambil bagian terakhir sebagai serial number.
+    Contoh: "HD_0124-Klinik HD Avio_2-XT02391" -> "XT02391"
+    """
+    parts = raw_id.split('-')
+    if len(parts) >= 3:
+        return parts[0]  # Ambil machineid
+    return raw_id  # Jika format pendek, biarkan
+
 # Fungsi untuk single machine (masih dipakai untuk update individual jika diperlukan, tapi tidak dipakai di /api/machines)
 def get_single_machine_data(machine: Machine):
     """Digunakan untuk keperluan lain jika perlu, tidak untuk batch."""
@@ -412,6 +422,7 @@ def log_error():
 @app.route('/update', methods=['POST'])
 def update_machine_status():
     try:
+        machine_id = normalize_machine_id(data.get('machine_id'))
         data = request.get_json()
         machine_id = data.get('machine_id')
         status = data.get('status')
@@ -463,6 +474,7 @@ def update_machine_status():
 @app.route('/pump-status', methods=['POST'])
 def update_pump_status():
     try:
+        machine_id = normalize_machine_id(data.get('machine_id'))
         data = request.get_json()
         machine_id = data.get('machine_id')
         pump_status = data.get('pump_status')
