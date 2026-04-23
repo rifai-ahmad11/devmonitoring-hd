@@ -422,9 +422,9 @@ def log_error():
 @app.route('/update', methods=['POST'])
 def update_machine_status():
     try:
-        machine_id = normalize_machine_id(data.get('machine_id'))
+       
         data = request.get_json()
-        machine_id = data.get('machine_id')
+        machine_id = normalize_machine_id(data.get('machine_id'))
         status = data.get('status')
         if not machine_id or not status:
             return jsonify({'error': 'Missing machine_id or status'}), 400
@@ -474,9 +474,9 @@ def update_machine_status():
 @app.route('/pump-status', methods=['POST'])
 def update_pump_status():
     try:
-        machine_id = normalize_machine_id(data.get('machine_id'))
+        
         data = request.get_json()
-        machine_id = data.get('machine_id')
+        machine_id = normalize_machine_id(data.get('machine_id'))
         pump_status = data.get('pump_status')
         if not machine_id or not pump_status:
             return jsonify({'error': 'Missing machine_id or pump_status'}), 400
