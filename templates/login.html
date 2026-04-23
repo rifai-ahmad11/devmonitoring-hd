@@ -58,13 +58,14 @@
 </head>
 <body>
     <div class="login-box">
-        <h2>🔐 Monitoring Dashboard</h2>
-        {% if error %}
-            <div class="error">{{ error }}</div>
-        {% endif %}
+        <h2>HD Monitoring Login</h2>
         <form method="POST">
-            <input type="password" name="password" placeholder="Masukkan password" required>
+            <input type="text" name="username" placeholder="Username" required>
+            <input type="password" name="password" placeholder="Password" required>
             <button type="submit">Login</button>
+            {% if error %}
+                <div class="error">{{ error }}</div>
+            {% endif %}
         </form>
     </div>
 </body>
