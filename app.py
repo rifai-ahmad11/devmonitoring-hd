@@ -127,11 +127,16 @@ def stop_dialysis_session_db(machine: Machine, current_time: datetime):
         machine.dialysis_session_start = None
         machine.pump_status = 'stopped'
 
-def get_all_machines_data():
+def get_all_machines_data(region_filter=None):
     # Query join machines dan metadata
     query = db_session.query(Machine, MachineMetadata).outerjoin(
         MachineMetadata, Machine.machine_id == MachineMetadata.machine_id
     )
+    
+    # Terapkan filter region jika ada
+    if region_filter is not None:
+        query = query.filter(MachineMetadata.region.in_(region_filter))
+    
     results = query.all()
 
     if not results:
@@ -370,24 +375,18 @@ def admin_panel():
 @app.route('/api/machines')
 @login_required
 def get_machines():
+    """Mengembalikan data semua machine sesuai hak akses user."""
     try:
         if session.get('role') == 'teknisi':
             allowed_regions = session.get('assigned_regions', [])
             if not allowed_regions:
-                # Jika teknisi tidak punya region, kembalikan kosong
                 return jsonify({})
-            # Query dengan filter region
-            query = db_session.query(Machine, MachineMetadata).outerjoin(
-                MachineMetadata, Machine.machine_id == MachineMetadata.machine_id
-            ).filter(MachineMetadata.region.in_(allowed_regions))
+            result = get_all_machines_data(region_filter=allowed_regions)
         else:
-            # Admin: semua mesin
-            query = db_session.query(Machine, MachineMetadata).outerjoin(
-                MachineMetadata, Machine.machine_id == MachineMetadata.machine_id
-            )
-        results = query.all()
-        # ... (proses seperti di get_all_machines_data, tapi pakai results)
-        # ...
+            # Admin: tanpa filter (region_filter=None)
+            result = get_all_machines_data()
+        
+        return jsonify(result)
     except Exception as e:
         print(f"Error in /api/machines: {e}")
         traceback.print_exc()
