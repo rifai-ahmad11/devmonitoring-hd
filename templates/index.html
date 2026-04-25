@@ -463,6 +463,16 @@
                 <span>Ringkasan</span>
             </div>
         </div>
+        {% if session.get('role') == 'admin' %}
+        <div class="nav-item" id="navAdminMetadata" onclick="window.location.href='/admin'">
+            <i class="fas fa-database"></i>
+            <span>Admin Metadata</span>
+        </div>
+        <div class="nav-item" id="navAdminUsers" onclick="window.location.href='/admin/users'">
+            <i class="fas fa-users-cog"></i>
+            <span>Manajemen User</span>
+        </div>
+        {% endif %}
     </div>
 
     <!-- MAIN CONTENT -->
