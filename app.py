@@ -317,7 +317,7 @@ def admin_required(f):
     @wraps(f)
     def decorated(*args, **kwargs):
         if session.get('role') != 'admin':
-            return redirect(url_for('dashboard'))  # atau forbidden
+            return redirect(url_for('login'))  # atau forbidden
         return f(*args, **kwargs)
     return decorated
     
@@ -802,21 +802,127 @@ def list_users():
     users = db_session.query(User).all()
     return render_template('admin_users.html', users=users)
 
-@app.route('/admin/users', methods=['POST'])
+@app.route('/admin/api/users', methods=['GET'])
 @admin_required
-def create_user():
-    data = request.form
-    hashed = generate_password_hash(data['password'])
-    regions = [r.strip() for r in data.get('regions', '').split(',') if r.strip()]
-    new_user = User(
-        username=data['username'],
-        password_hash=hashed,
-        role=data['role'],
-        assigned_regions=regions
-    )
-    db_session.add(new_user)
-    db_session.commit()
-    return redirect(url_for('list_users'))
+def api_get_users():
+    try:
+        users = db_session.query(User).all()
+        result = []
+        for u in users:
+            result.append({
+                'id': u.id,
+                'username': u.username,
+                'role': u.role,
+                'assigned_regions': u.assigned_regions if u.assigned_regions else []
+            })
+        return jsonify(result)
+    except Exception as e:
+        print(f"Error in get users: {e}")
+        traceback.print_exc()
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/admin/api/users/<int:user_id>', methods=['GET'])
+@admin_required
+def api_get_user(user_id):
+    try:
+        user = db_session.get(User, user_id)
+        if not user:
+            return jsonify({'error': 'User not found'}), 404
+        return jsonify({
+            'id': user.id,
+            'username': user.username,
+            'role': user.role,
+            'assigned_regions': user.assigned_regions if user.assigned_regions else []
+        })
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/admin/api/users', methods=['POST'])
+@admin_required
+def api_create_user():
+    try:
+        data = request.get_json()
+        username = data.get('username', '').strip()
+        password = data.get('password', '')
+        role = data.get('role', '')
+        assigned_regions = data.get('assigned_regions', [])
+
+        if not username or not password or not role:
+            return jsonify({'error': 'Username, password, dan role harus diisi'}), 400
+
+        if role not in ['admin', 'teknisi']:
+            return jsonify({'error': 'Role tidak valid'}), 400
+
+        # Cek username sudah ada
+        existing = db_session.query(User).filter_by(username=username).first()
+        if existing:
+            return jsonify({'error': 'Username sudah digunakan'}), 409
+
+        hashed = generate_password_hash(password)
+        new_user = User(
+            username=username,
+            password_hash=hashed,
+            role=role,
+            assigned_regions=assigned_regions if role == 'teknisi' else []
+        )
+        db_session.add(new_user)
+        db_session.commit()
+        return jsonify({'success': True, 'message': 'User berhasil dibuat'})
+    except Exception as e:
+        db_session.rollback()
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/admin/api/users/<int:user_id>', methods=['PUT'])
+@admin_required
+def api_update_user(user_id):
+    try:
+        user = db_session.get(User, user_id)
+        if not user:
+            return jsonify({'error': 'User not found'}), 404
+
+        data = request.get_json()
+        username = data.get('username', '').strip()
+        password = data.get('password', '')
+        role = data.get('role', '')
+        assigned_regions = data.get('assigned_regions', [])
+
+        # Cek username baru tidak dipakai user lain
+        if username and username != user.username:
+            existing = db_session.query(User).filter_by(username=username).first()
+            if existing:
+                return jsonify({'error': 'Username sudah digunakan'}), 409
+            user.username = username
+
+        if password:
+            user.password_hash = generate_password_hash(password)
+
+        if role and role in ['admin', 'teknisi']:
+            user.role = role
+            if role == 'teknisi':
+                user.assigned_regions = assigned_regions
+            else:
+                user.assigned_regions = []
+
+        db_session.commit()
+        return jsonify({'success': True, 'message': 'User berhasil diperbarui'})
+    except Exception as e:
+        db_session.rollback()
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/admin/api/users/<int:user_id>', methods=['DELETE'])
+@admin_required
+def api_delete_user(user_id):
+    try:
+        user = db_session.get(User, user_id)
+        if not user:
+            return jsonify({'error': 'User not found'}), 404
+
+        db_session.delete(user)
+        db_session.commit()
+        return jsonify({'success': True, 'message': 'User berhasil dihapus'})
+    except Exception as e:
+        db_session.rollback()
+        return jsonify({'error': str(e)}), 500
 
 # Mulai background threads
 timeout_thread = threading.Thread(target=check_machine_timeout, daemon=True)
