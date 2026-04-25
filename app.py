@@ -15,7 +15,7 @@ app = Flask(__name__)
 app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'your_secret_key_here')
 
 LOGIN_PASSWORD = os.environ.get('DASHBOARD_PASSWORD', 'OJI2026!')
-ADMIN_PASSWORD = os.environ.get('ADMIN_PASSWORD', 'ADMIN2026!')  # Ganti di production!
+  # Ganti di production!
 
 # Konfigurasi database
 DATABASE_URL = os.environ.get('DATABASE_URL', 'postgresql://postgres:fAfrLTxIvblQAiXDRvllRuJqiGgzYBvx@turntable.proxy.rlwy.net:29037/railway')
@@ -316,8 +316,11 @@ def login_required(f):
 def admin_required(f):
     @wraps(f)
     def decorated(*args, **kwargs):
+        if not session.get('logged_in'):
+            return redirect(url_for('login'))
         if session.get('role') != 'admin':
-            return redirect(url_for('login'))  # atau forbidden
+            # Bisa redirect ke dashboard atau tampilkan halaman forbidden
+            return redirect(url_for('index'))
         return f(*args, **kwargs)
     return decorated
     
@@ -351,20 +354,7 @@ def logout():
     session.clear()
     return redirect(url_for('login'))
 
-@app.route('/admin/login', methods=['GET', 'POST'])
-def admin_login():
-    if request.method == 'POST':
-        if request.form.get('password') == ADMIN_PASSWORD:
-            session['is_admin'] = True
-            session['logged_in'] = True  # opsional
-            return redirect(url_for('admin_panel'))
-        return render_template('admin_login.html', error="Password salah")
-    return render_template('admin_login.html')
 
-@app.route('/admin/logout')
-def admin_logout():
-    session.pop('is_admin', None)
-    return redirect(url_for('admin_login'))
 
 @app.route('/admin')
 @admin_required
@@ -796,11 +786,10 @@ def delete_metadata(machine_id):
         traceback.print_exc()
         return jsonify({'error': 'Internal server error'}), 500
 
-@app.route('/admin/users', methods=['GET'])
+@app.route('/admin/users')
 @admin_required
-def list_users():
-    users = db_session.query(User).all()
-    return render_template('admin_users.html', users=users)
+def admin_users():
+    return render_template('admin_users.html')
 
 @app.route('/admin/api/users', methods=['GET'])
 @admin_required
