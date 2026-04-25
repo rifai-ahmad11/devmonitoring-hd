@@ -9,6 +9,7 @@ from sqlalchemy import create_engine, Column, String, Float, Integer, DateTime, 
 from sqlalchemy.orm import declarative_base, sessionmaker, scoped_session, relationship
 from werkzeug.security import generate_password_hash, check_password_hash
 from sqlalchemy import ARRAY
+from sqlalchemy import Enum as SAEnum
 
 # Inisialisasi Flask
 app = Flask(__name__)
@@ -98,24 +99,30 @@ class MachineMetadata(Base):
         Index('idx_metadata_subregion', 'subregion'),
         Index('idx_metadata_hospital', 'hospital_name'),
     )
-    
+
+class MaintenanceConfig(Base):
+    __tablename__ = 'maintenance_config'
+    id = Column(Integer, primary_key=True)
+    item_code = Column(String(50), unique=True, nullable=False)
+    name = Column(String(100), nullable=False)
+    description = Column(Text)
+    threshold_type = Column(String(20), nullable=False)  # 'treatment_count' atau 'time_interval'
+    threshold_value = Column(Integer, nullable=False)
+    time_unit = Column(String(10))                       # 'months', 'days', null
+    active = Column(Boolean, default=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
 # Buat tabel jika belum ada
 Base.metadata.create_all(bind=engine)
 
 # Konfigurasi threshold
-MAINTENANCE_THRESHOLDS = {'filter_inlet': 200}
+#MAINTENANCE_THRESHOLDS = {'filter_inlet': 200}
 MIN_DIALYSIS_DURATION = 3600
 MIN_TREATMENT_DURATION = 5440
 HEARTBEAT_TIMEOUT = 390
 
-# --- Helper Functions (yang tidak berubah) ---
-def get_maintenance_name(item):
-    names = {'filter_inlet': 'Filter Inlet'}
-    return names.get(item, item)
 
-def get_maintenance_description(item):
-    descriptions = {'filter_inlet': 'Ganti filter endotoksin untuk memastikan kualitas air tetap optimal.'}
-    return descriptions.get(item, 'Perlu perawatan rutin.')
 
 def stop_dialysis_session_db(machine: Machine, current_time: datetime):
     if machine.dialysis_session_start:
@@ -152,7 +159,8 @@ def get_all_machines_data(region_filter=None):
 
     # Query maintenance terakhir per item
     items = list(MAINTENANCE_THRESHOLDS.keys())
-    last_maintenance_subq = (
+    # Query untuk mendapatkan maintenance terakhir per mesin & item (timestamp & dialysis_count)
+    last_maint_subq = (
         db_session.query(
             Maintenance.machine_id,
             Maintenance.item,
@@ -162,19 +170,22 @@ def get_all_machines_data(region_filter=None):
                 partition_by=(Maintenance.machine_id, Maintenance.item),
                 order_by=desc(Maintenance.timestamp)
             ).label('rn')
-        )
-        .filter(Maintenance.item.in_(items))
-        .subquery()
+        ).subquery()
     )
-    last_maintenance_query = db_session.query(
-        last_maintenance_subq.c.machine_id,
-        last_maintenance_subq.c.item,
-        last_maintenance_subq.c.dialysis_count
-    ).filter(last_maintenance_subq.c.rn == 1).all()
+    last_maint_query = db_session.query(
+        last_maint_subq.c.machine_id,
+        last_maint_subq.c.item,
+        last_maint_subq.c.dialysis_count,
+        last_maint_subq.c.timestamp
+    ).filter(last_maint_subq.c.rn == 1).all()
 
-    last_maintenance_dict = {}
-    for row in last_maintenance_query:
-        last_maintenance_dict[(row.machine_id, row.item)] = row.dialysis_count
+    # Bangun dictionary: key = (machine_id, item) -> (dialysis_count, timestamp)
+    last_maint_dict = {}
+    for row in last_maint_query:
+        last_maint_dict[(row.machine_id, row.item)] = {
+            'dialysis_count': row.dialysis_count,
+            'timestamp': row.timestamp
+        }
 
     current_time = datetime.now()
     result = {}
@@ -199,19 +210,54 @@ def get_all_machines_data(region_filter=None):
 
         error_count = error_counts.get(machine_id, 0)
 
-        # Hitung maintenance required
+        # Evaluasi maintenance required untuk setiap item di config
         maintenance_required = []
         completed_dialysis = machine.completed_dialysis
-        for item, threshold in MAINTENANCE_THRESHOLDS.items():
-            last_dialysis = last_maintenance_dict.get((machine_id, item), 0)
-            if completed_dialysis - last_dialysis >= threshold:
+        for cfg in maintenance_config_list:
+            item = cfg.item_code
+            last_data = last_maint_dict.get((machine_id, item))
+            need_maint = False
+            treatments_since_last = None
+
+            if cfg.threshold_type == 'treatment_count':
+                last_dialysis = last_data['dialysis_count'] if last_data else 0
+                if completed_dialysis - last_dialysis >= cfg.threshold_value:
+                    need_maint = True
+                    treatments_since_last = completed_dialysis - last_dialysis
+            elif cfg.threshold_type == 'time_interval':
+                if last_data and last_data['timestamp']:
+                    last_time = last_data['timestamp']
+                else:
+                    # fallback: gunakan registered_at dari metadata sebagai baseline
+                    if metadata and metadata.registered_at:
+                        last_time = metadata.registered_at
+                    else:
+                        last_time = None
+                if last_time:
+                    # Hitung selisih waktu berdasarkan time_unit
+                    delta = current_time - last_time
+                    if cfg.time_unit == 'months':
+                        threshold_seconds = cfg.threshold_value * 30 * 24 * 3600  # aproksimasi 30 hari
+                    elif cfg.time_unit == 'days':
+                        threshold_seconds = cfg.threshold_value * 24 * 3600
+                    else:
+                        threshold_seconds = cfg.threshold_value * 24 * 3600  # default days
+                    if delta.total_seconds() >= threshold_seconds:
+                        need_maint = True
+                        treatments_since_last = None  # tidak relevan
+                else:
+                    # Tidak ada baseline sama sekali -> anggap perlu maintenance
+                    need_maint = True
+
+            if need_maint:
                 maintenance_required.append({
                     'item': item,
-                    'name': get_maintenance_name(item),
-                    'description': get_maintenance_description(item),
-                    'threshold': threshold,
-                    'treatments_since_last': completed_dialysis - last_dialysis,
-                    'last_maintenance_treatment': last_dialysis
+                    'name': cfg.name,
+                    'description': cfg.description,
+                    'threshold_type': cfg.threshold_type,
+                    'threshold_value': cfg.threshold_value,
+                    'time_unit': cfg.time_unit,
+                    'treatments_since_last': treatments_since_last
                 })
 
         # Durasi sesi saat ini
@@ -543,6 +589,7 @@ def update_pump_status():
         return jsonify({'error': 'Internal server error'}), 500
 
 @app.route('/maintenance-done', methods=['POST'])
+@login_required
 def mark_maintenance_done():
     try:
         data = request.get_json()
@@ -555,18 +602,22 @@ def mark_maintenance_done():
         if not machine:
             return jsonify({'error': 'Machine not found'}), 404
 
+        # Ambil nama item dari maintenance_config jika ada
+        config = db_session.query(MaintenanceConfig).filter_by(item_code=maintenance_item).first()
+        item_name = config.name if config else maintenance_item
+
         # Simpan record maintenance
         maintenance_record = Maintenance(
             machine_id=machine_id,
             item=maintenance_item,
             dialysis_count=machine.completed_dialysis,
-            description=f'Maintenance {get_maintenance_name(maintenance_item)} dilakukan',
+            description=f'Maintenance {item_name} dilakukan',
             performed_by=session.get('user_id')
         )
         db_session.add(maintenance_record)
         db_session.commit()
 
-        print(f"Maintenance marked as done for {machine_id}: {maintenance_item}")
+        print(f"Maintenance marked as done for {machine_id}: {maintenance_item} by user {session.get('username')}")
         return jsonify({'success': True, 'message': 'Maintenance marked as done'})
     except Exception as e:
         db_session.rollback()
@@ -909,6 +960,139 @@ def api_delete_user(user_id):
         db_session.delete(user)
         db_session.commit()
         return jsonify({'success': True, 'message': 'User berhasil dihapus'})
+    except Exception as e:
+        db_session.rollback()
+        return jsonify({'error': str(e)}), 500
+
+# ========== Maintenance Config API (Admin Only) ==========
+
+@app.route('/admin/maintenance')
+@admin_required
+def admin_maintenance():
+    return render_template('admin_maintenance.html')
+
+@app.route('/api/maintenance-config', methods=['GET'])
+@admin_required
+def get_maintenance_configs():
+    try:
+        configs = db_session.query(MaintenanceConfig).order_by(MaintenanceConfig.id).all()
+        result = []
+        for c in configs:
+            result.append({
+                'id': c.id,
+                'item_code': c.item_code,
+                'name': c.name,
+                'description': c.description,
+                'threshold_type': c.threshold_type,
+                'threshold_value': c.threshold_value,
+                'time_unit': c.time_unit,
+                'active': c.active
+            })
+        return jsonify(result)
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/maintenance-config', methods=['POST'])
+@admin_required
+def create_maintenance_config():
+    try:
+        data = request.get_json()
+        item_code = data.get('item_code', '').strip()
+        name = data.get('name', '').strip()
+        description = data.get('description', '')
+        threshold_type = data.get('threshold_type')
+        threshold_value = data.get('threshold_value')
+        time_unit = data.get('time_unit')
+
+        if not item_code or not name or not threshold_type or threshold_value is None:
+            return jsonify({'error': 'Field item_code, name, threshold_type, dan threshold_value harus diisi'}), 400
+
+        if threshold_type not in ('treatment_count', 'time_interval'):
+            return jsonify({'error': 'threshold_type tidak valid'}), 400
+
+        if threshold_type == 'time_interval' and not time_unit:
+            return jsonify({'error': 'time_unit harus diisi untuk time_interval'}), 400
+
+        existing = db_session.query(MaintenanceConfig).filter_by(item_code=item_code).first()
+        if existing:
+            return jsonify({'error': 'Item code sudah ada'}), 409
+
+        config = MaintenanceConfig(
+            item_code=item_code,
+            name=name,
+            description=description,
+            threshold_type=threshold_type,
+            threshold_value=int(threshold_value),
+            time_unit=time_unit if threshold_type == 'time_interval' else None
+        )
+        db_session.add(config)
+        db_session.commit()
+        return jsonify({'success': True, 'message': 'Konfigurasi berhasil ditambahkan'})
+    except Exception as e:
+        db_session.rollback()
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/maintenance-config/<int:config_id>', methods=['PUT'])
+@admin_required
+def update_maintenance_config(config_id):
+    try:
+        config = db_session.get(MaintenanceConfig, config_id)
+        if not config:
+            return jsonify({'error': 'Konfigurasi tidak ditemukan'}), 404
+
+        data = request.get_json()
+        item_code = data.get('item_code', '').strip()
+        name = data.get('name', '').strip()
+        description = data.get('description', '')
+        threshold_type = data.get('threshold_type')
+        threshold_value = data.get('threshold_value')
+        time_unit = data.get('time_unit')
+
+        if not item_code or not name or not threshold_type or threshold_value is None:
+            return jsonify({'error': 'Field item_code, name, threshold_type, dan threshold_value harus diisi'}), 400
+
+        if threshold_type not in ('treatment_count', 'time_interval'):
+            return jsonify({'error': 'threshold_type tidak valid'}), 400
+
+        if threshold_type == 'time_interval' and not time_unit:
+            return jsonify({'error': 'time_unit harus diisi untuk time_interval'}), 400
+
+        # Cek apakah item_code sudah dipakai oleh konfigurasi lain
+        existing = db_session.query(MaintenanceConfig).filter(
+            MaintenanceConfig.item_code == item_code,
+            MaintenanceConfig.id != config_id
+        ).first()
+        if existing:
+            return jsonify({'error': 'Item code sudah digunakan konfigurasi lain'}), 409
+
+        config.item_code = item_code
+        config.name = name
+        config.description = description
+        config.threshold_type = threshold_type
+        config.threshold_value = int(threshold_value)
+        config.time_unit = time_unit if threshold_type == 'time_interval' else None
+        config.updated_at = datetime.utcnow()
+
+        db_session.commit()
+        return jsonify({'success': True, 'message': 'Konfigurasi berhasil diperbarui'})
+    except Exception as e:
+        db_session.rollback()
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/maintenance-config/<int:config_id>', methods=['DELETE'])
+@admin_required
+def delete_maintenance_config(config_id):
+    try:
+        config = db_session.get(MaintenanceConfig, config_id)
+        if not config:
+            return jsonify({'error': 'Konfigurasi tidak ditemukan'}), 404
+
+        db_session.delete(config)
+        db_session.commit()
+        return jsonify({'success': True, 'message': 'Konfigurasi berhasil dihapus'})
     except Exception as e:
         db_session.rollback()
         return jsonify({'error': str(e)}), 500
