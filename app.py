@@ -5,7 +5,7 @@ from functools import wraps
 import threading
 import time
 import traceback
-from sqlalchemy import create_engine, Column, String, Float, Integer, DateTime, Text, func, and_, desc, Index, ForeignKey
+from sqlalchemy import create_engine, Column, String, Float, Integer, DateTime, Text, func, and_, desc, Index, ForeignKey, Boolean
 from sqlalchemy.orm import declarative_base, sessionmaker, scoped_session, relationship
 from werkzeug.security import generate_password_hash, check_password_hash
 from sqlalchemy import ARRAY
