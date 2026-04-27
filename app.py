@@ -157,8 +157,12 @@ def get_all_machines_data(region_filter=None):
     for row in error_count_query:
         error_counts[row.machine_id] = row.count
 
-    # Query maintenance terakhir per item
-    items = list(MAINTENANCE_THRESHOLDS.keys())
+    configs = db_session.query(MaintenanceConfig).filter_by(active=True).all()
+    if not configs:
+        # fallback kosong jika belum ada konfigurasi
+        maintenance_config_list = []
+    else:
+        maintenance_config_list = configs
     # Query untuk mendapatkan maintenance terakhir per mesin & item (timestamp & dialysis_count)
     last_maint_subq = (
         db_session.query(
