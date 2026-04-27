@@ -190,6 +190,10 @@
                 <input type="text" id="adminSubregion" placeholder="Subregion (contoh: Bandung)">
                 <input type="text" id="adminAddress" placeholder="Alamat lengkap" style="grid-column: span 2;">
             </div>
+            <select id="adminCategory" style="padding:8px;">
+                <option value="Non-KSO">Non-KSO</option>
+                <option value="KSO">KSO</option>
+            </select>
             <div style="display: flex; gap: 15px;">
                 <button id="adminSaveBtn" class="btn-primary"><i class="fas fa-save"></i> Simpan Metadata</button>
                 <button id="clearFormBtn" class="btn-secondary"><i class="fas fa-eraser"></i> Bersihkan Form</button>
@@ -296,6 +300,7 @@
                             document.getElementById('adminRegion').value = data.region || '';
                             document.getElementById('adminSubregion').value = data.subregion || '';
                             document.getElementById('adminAddress').value = data.address || '';
+                            document.getElementById('adminCategory').value = data.category || '';
                             
                             // Scroll ke form
                             document.querySelector('.card').scrollIntoView({ behavior: 'smooth' });
@@ -348,6 +353,7 @@
                     region: document.getElementById('adminRegion').value.trim() || null,
                     subregion: document.getElementById('adminSubregion').value.trim() || null,
                     address: document.getElementById('adminAddress').value.trim() || null
+                    category: document.getElementById('adminCategory').value || null
                 };
 
                 try {
@@ -376,7 +382,7 @@
             });
 
             function clearForm() {
-                document.querySelectorAll('#adminMachineId, #adminSerialNumber, #adminHospitalName, #adminUnitNumber, #adminRegion, #adminSubregion, #adminAddress').forEach(i => i.value = '');
+                document.querySelectorAll('#adminMachineId, #adminSerialNumber, #adminHospitalName, #adminUnitNumber, #adminRegion, #adminSubregion, #adminAddress', #adminCategory).forEach(i => i.value = '');
             }
 
             document.getElementById('clearFormBtn').addEventListener('click', clearForm);
