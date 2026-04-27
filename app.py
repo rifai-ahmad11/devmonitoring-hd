@@ -158,11 +158,7 @@ def get_all_machines_data(region_filter=None):
         error_counts[row.machine_id] = row.count
 
     configs = db_session.query(MaintenanceConfig).filter_by(active=True).all()
-    if not configs:
-        # fallback kosong jika belum ada konfigurasi
-        maintenance_config_list = []
-    else:
-        maintenance_config_list = configs
+    items = [cfg.item_code for cfg in configs]
     # Query untuk mendapatkan maintenance terakhir per mesin & item (timestamp & dialysis_count)
     last_maint_subq = (
         db_session.query(
@@ -216,43 +212,35 @@ def get_all_machines_data(region_filter=None):
 
         # Evaluasi maintenance required untuk setiap item di config
         maintenance_required = []
-        completed_dialysis = machine.completed_dialysis
-        for cfg in maintenance_config_list:
+        for cfg in configs:
             item = cfg.item_code
             last_data = last_maint_dict.get((machine_id, item))
             need_maint = False
             treatments_since_last = None
-
+        
             if cfg.threshold_type == 'treatment_count':
-                last_dialysis = last_data['dialysis_count'] if last_data else 0
-                if completed_dialysis - last_dialysis >= cfg.threshold_value:
+                last_dialysis_count = last_data['dialysis_count'] if last_data else 0
+                diff = machine.completed_dialysis - last_dialysis_count
+                if diff >= cfg.threshold_value:
                     need_maint = True
-                    treatments_since_last = completed_dialysis - last_dialysis
+                    treatments_since_last = diff
             elif cfg.threshold_type == 'time_interval':
                 if last_data and last_data['timestamp']:
                     last_time = last_data['timestamp']
                 else:
-                    # fallback: gunakan registered_at dari metadata sebagai baseline
+                    # fallback ke registered_at dari metadata
                     if metadata and metadata.registered_at:
                         last_time = metadata.registered_at
                     else:
                         last_time = None
                 if last_time:
-                    # Hitung selisih waktu berdasarkan time_unit
                     delta = current_time - last_time
-                    if cfg.time_unit == 'months':
-                        threshold_seconds = cfg.threshold_value * 30 * 24 * 3600  # aproksimasi 30 hari
-                    elif cfg.time_unit == 'days':
-                        threshold_seconds = cfg.threshold_value * 24 * 3600
-                    else:
-                        threshold_seconds = cfg.threshold_value * 24 * 3600  # default days
+                    threshold_seconds = cfg.threshold_value * 30 * 24 * 3600  # aproksimasi 30 hari per bulan
                     if delta.total_seconds() >= threshold_seconds:
                         need_maint = True
-                        treatments_since_last = None  # tidak relevan
                 else:
-                    # Tidak ada baseline sama sekali -> anggap perlu maintenance
-                    need_maint = True
-
+                    need_maint = True  # tidak ada baseline -> perlu maintenance
+        
             if need_maint:
                 maintenance_required.append({
                     'item': item,
