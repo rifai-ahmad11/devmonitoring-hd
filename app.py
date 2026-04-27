@@ -88,6 +88,7 @@ class MachineMetadata(Base):
     unit_number = Column(Integer)
     region = Column(String(50))
     subregion = Column(String(50))
+    category = Column(String(10), default='KSO')
     address = Column(Text)
     registered_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
@@ -281,6 +282,7 @@ def get_all_machines_data(region_filter=None):
             'region': region,
             'subregion': subregion,
             'serial_number': serial_number,
+            'category': metadata.category if metadata else 'KSO',
         }
 
     return result
@@ -695,6 +697,7 @@ def get_all_metadata():
                 'unit_number': m.unit_number,
                 'region': m.region,
                 'subregion': m.subregion,
+                'category': m.category,
                 'address': m.address,
                 'registered_at': m.registered_at.isoformat() if m.registered_at else None
             })
@@ -720,6 +723,7 @@ def get_metadata(machine_id):
                 'unit_number': fallback['unit_number'],
                 'region': None,
                 'subregion': None,
+                'category': m.category,
                 'address': None,
                 'is_fallback': True
             })
@@ -730,6 +734,7 @@ def get_metadata(machine_id):
             'unit_number': metadata.unit_number,
             'region': metadata.region,
             'subregion': metadata.subregion,
+            'category': m.category,
             'address': metadata.address,
             'is_fallback': False
         })
@@ -745,6 +750,7 @@ def create_metadata():
     try:
         data = request.get_json()
         machine_id = data.get('machine_id')
+        category = data.get('category', 'KSO')
         if not machine_id:
             return jsonify({'error': 'machine_id required'}), 400
 
@@ -767,6 +773,7 @@ def create_metadata():
             unit_number=data.get('unit_number'),
             region=data.get('region'),
             subregion=data.get('subregion'),
+            category=category,
             address=data.get('address')
         )
         db_session.add(metadata)
