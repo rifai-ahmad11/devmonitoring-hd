@@ -82,14 +82,14 @@
             gap: 15px;
             margin-bottom: 20px;
         }
-        .form-grid input {
+        .form-grid input, .form-grid select {
             padding: 12px 15px;
             border: 1px solid #ddd;
             border-radius: 10px;
             font-size: 14px;
             transition: border 0.2s;
         }
-        .form-grid input:focus {
+        .form-grid input:focus, .form-grid select:focus {
             outline: none;
             border-color: #4a90e2;
         }
@@ -158,6 +158,19 @@
             padding: 40px;
             color: #999;
         }
+        .filter-bar {
+            display: flex;
+            gap: 20px;
+            margin-bottom: 15px;
+            align-items: center;
+            color: white;
+        }
+        .filter-bar select {
+            padding: 10px 15px;
+            border-radius: 10px;
+            border: 1px solid #ddd;
+            font-size: 14px;
+        }
         hr {
             margin: 30px 0;
             border: 0;
@@ -188,13 +201,13 @@
                 <input type="number" id="adminUnitNumber" placeholder="Nomor Unit *" required>
                 <input type="text" id="adminRegion" placeholder="Region (contoh: Jawa Barat)">
                 <input type="text" id="adminSubregion" placeholder="Subregion (contoh: Bandung)">
-                <input type="text" id="adminAddress" placeholder="Alamat lengkap" style="grid-column: span 2;">
+                <!-- Kategori -->
+                <select id="adminCategory" style="padding:12px 15px; border:1px solid #ddd; border-radius:10px; font-size:14px;">
+                    <option value="Non-KSO">Non-KSO</option>
+                    <option value="KSO">KSO</option>
+                </select>
             </div>
-            <select id="adminCategory" style="padding:8px;">
-                <option value="Non-KSO">Non-KSO</option>
-                <option value="KSO">KSO</option>
-            </select>
-            <div style="display: flex; gap: 15px;">
+            <div style="display: flex; gap: 15px; margin-top: 15px;">
                 <button id="adminSaveBtn" class="btn-primary"><i class="fas fa-save"></i> Simpan Metadata</button>
                 <button id="clearFormBtn" class="btn-secondary"><i class="fas fa-eraser"></i> Bersihkan Form</button>
             </div>
@@ -206,6 +219,15 @@
         <div class="section-title">
             <i class="fas fa-list"></i> Daftar Metadata Mesin
         </div>
+        <!-- Filter Region / Subregion -->
+        <div class="filter-bar">
+            <select id="filterRegion">
+                <option value="">Semua Region</option>
+            </select>
+            <select id="filterSubregion">
+                <option value="">Semua Subregion</option>
+            </select>
+        </div>
         <div class="card" style="padding: 0; overflow-x: auto;">
             <table id="metadataTable">
                 <thead>
@@ -216,11 +238,12 @@
                         <th>Unit</th>
                         <th>Region</th>
                         <th>Subregion</th>
+                        <th>Kategori</th>
                         <th style="width: 180px;">Aksi</th>
                     </tr>
                 </thead>
                 <tbody id="metadataTableBody">
-                    <tr><td colspan="6" class="loading-message">Memuat data...</td></tr>
+                    <tr><td colspan="8" class="loading-message">Memuat data...</td></tr>
                 </tbody>
             </table>
         </div>
@@ -228,7 +251,8 @@
 
     <script>
         (function() {
-            // Helper escape HTML
+            let allMetadata = [];
+
             function escapeHtml(str) {
                 if (!str) return '';
                 return String(str)
@@ -239,52 +263,103 @@
                     .replace(/'/g, '&#039;');
             }
 
-            // Load metadata list
             async function loadMetadataList() {
                 const tbody = document.getElementById('metadataTableBody');
-                tbody.innerHTML = '<tr><td colspan="6" class="loading-message">Memuat data...</td></tr>';
-                
+                tbody.innerHTML = '<tr><td colspan="8" class="loading-message">Memuat data...</td></tr>';
                 try {
                     const res = await fetch('/api/metadata');
                     if (!res.ok) throw new Error('Gagal fetch');
                     const data = await res.json();
-                    
-                    if (data.length === 0) {
-                        tbody.innerHTML = '<tr><td colspan="6" class="empty-message">Belum ada data metadata.</td></tr>';
-                        return;
-                    }
-                    
-                    tbody.innerHTML = '';
-                    data.forEach(item => {
-                        const row = document.createElement('tr');
-                        row.innerHTML = `
-                            <td><code>${escapeHtml(item.machine_id)}</code></td>
-                            <td>${escapeHtml(item.serial_number || '-')}</td>
-                            <td>${escapeHtml(item.hospital_name)}</td>
-                            <td>${item.unit_number || '-'}</td>
-                            <td>${escapeHtml(item.region || '-')}</td>
-                            <td>${escapeHtml(item.subregion || '-')}</td>
-                            <td>
-                                <button class="btn-secondary edit-btn" data-id="${escapeHtml(item.machine_id)}">
-                                    <i class="fas fa-edit"></i> Edit
-                                </button>
-                                <button class="btn-delete delete-btn" data-id="${escapeHtml(item.machine_id)}">
-                                    <i class="fas fa-trash"></i> Hapus
-                                </button>
-                            </td>
-                        `;
-                        tbody.appendChild(row);
-                    });
-                    
-                    attachTableEvents();
+                    allMetadata = data;
+                    populateRegionFilter();
+                    renderFilteredTable();
                 } catch (err) {
                     console.error(err);
-                    tbody.innerHTML = '<tr><td colspan="6" class="empty-message">Gagal memuat data. Periksa koneksi.</td></tr>';
+                    tbody.innerHTML = '<tr><td colspan="8" class="empty-message">Gagal memuat data. Periksa koneksi.</td></tr>';
                 }
             }
 
+            function populateRegionFilter() {
+                const regions = [...new Set(allMetadata.map(item => item.region).filter(r => r))];
+                const select = document.getElementById('filterRegion');
+                select.innerHTML = '<option value="">Semua Region</option>';
+                regions.sort().forEach(r => {
+                    select.innerHTML += `<option value="${escapeHtml(r)}">${escapeHtml(r)}</option>`;
+                });
+                document.getElementById('filterSubregion').innerHTML = '<option value="">Semua Subregion</option>';
+            }
+
+            function populateSubregionFilter(selectedRegion) {
+                const subregions = [...new Set(
+                    allMetadata
+                        .filter(item => item.region === selectedRegion)
+                        .map(item => item.subregion)
+                        .filter(r => r)
+                )];
+                const select = document.getElementById('filterSubregion');
+                select.innerHTML = '<option value="">Semua Subregion</option>';
+                subregions.sort().forEach(r => {
+                    select.innerHTML += `<option value="${escapeHtml(r)}">${escapeHtml(r)}</option>`;
+                });
+            }
+
+            function renderFilteredTable() {
+                const tbody = document.getElementById('metadataTableBody');
+                const regionFilter = document.getElementById('filterRegion').value;
+                const subregionFilter = document.getElementById('filterSubregion').value;
+
+                const filtered = allMetadata.filter(item => {
+                    if (regionFilter && item.region !== regionFilter) return false;
+                    if (subregionFilter && item.subregion !== subregionFilter) return false;
+                    return true;
+                });
+
+                if (filtered.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="8" class="empty-message">Tidak ada metadata yang sesuai filter.</td></tr>';
+                    return;
+                }
+
+                tbody.innerHTML = '';
+                filtered.forEach(item => {
+                    const row = document.createElement('tr');
+                    row.innerHTML = `
+                        <td><code>${escapeHtml(item.machine_id)}</code></td>
+                        <td>${escapeHtml(item.serial_number || '-')}</td>
+                        <td>${escapeHtml(item.hospital_name)}</td>
+                        <td>${item.unit_number || '-'}</td>
+                        <td>${escapeHtml(item.region || '-')}</td>
+                        <td>${escapeHtml(item.subregion || '-')}</td>
+                        <td>${escapeHtml(item.category || 'Non-KSO')}</td>
+                        <td>
+                            <button class="btn-secondary edit-btn" data-id="${escapeHtml(item.machine_id)}">
+                                <i class="fas fa-edit"></i> Edit
+                            </button>
+                            <button class="btn-delete delete-btn" data-id="${escapeHtml(item.machine_id)}">
+                                <i class="fas fa-trash"></i> Hapus
+                            </button>
+                        </td>
+                    `;
+                    tbody.appendChild(row);
+                });
+
+                attachTableEvents();
+            }
+
+            document.getElementById('filterRegion').addEventListener('change', function() {
+                const region = this.value;
+                if (region) {
+                    populateSubregionFilter(region);
+                } else {
+                    document.getElementById('filterSubregion').innerHTML = '<option value="">Semua Subregion</option>';
+                }
+                renderFilteredTable();
+            });
+
+            document.getElementById('filterSubregion').addEventListener('change', function() {
+                renderFilteredTable();
+            });
+
             function attachTableEvents() {
-                // Edit button
                 document.querySelectorAll('.edit-btn').forEach(btn => {
                     btn.addEventListener('click', async () => {
                         const id = btn.dataset.id;
@@ -299,10 +374,8 @@
                             document.getElementById('adminUnitNumber').value = data.unit_number || '';
                             document.getElementById('adminRegion').value = data.region || '';
                             document.getElementById('adminSubregion').value = data.subregion || '';
-                            document.getElementById('adminAddress').value = data.address || '';
-                            document.getElementById('adminCategory').value = data.category || '';
+                            document.getElementById('adminCategory').value = data.category || 'Non-KSO';
                             
-                            // Scroll ke form
                             document.querySelector('.card').scrollIntoView({ behavior: 'smooth' });
                         } catch (err) {
                             alert('Gagal mengambil data mesin.');
@@ -310,7 +383,6 @@
                     });
                 });
 
-                // Delete button
                 document.querySelectorAll('.delete-btn').forEach(btn => {
                     btn.addEventListener('click', async () => {
                         if (!confirm('Yakin ingin menghapus metadata ini? Data mesin tetap ada.')) return;
@@ -331,7 +403,6 @@
                 });
             }
 
-            // Save metadata (POST/PUT)
             document.getElementById('adminSaveBtn').addEventListener('click', async () => {
                 const machineId = document.getElementById('adminMachineId').value.trim();
                 const hospitalName = document.getElementById('adminHospitalName').value.trim();
@@ -352,12 +423,10 @@
                     unit_number: document.getElementById('adminUnitNumber').value ? parseInt(document.getElementById('adminUnitNumber').value) : null,
                     region: document.getElementById('adminRegion').value.trim() || null,
                     subregion: document.getElementById('adminSubregion').value.trim() || null,
-                    address: document.getElementById('adminAddress').value.trim() || null
-                    category: document.getElementById('adminCategory').value || null
+                    category: document.getElementById('adminCategory').value || 'Non-KSO'
                 };
 
                 try {
-                    // Cek apakah sudah ada
                     const checkRes = await fetch(`/api/metadata/${machineId}`);
                     const method = checkRes.ok ? 'PUT' : 'POST';
                     const url = method === 'PUT' ? `/api/metadata/${machineId}` : '/api/metadata';
@@ -382,15 +451,13 @@
             });
 
             function clearForm() {
-                document.querySelectorAll('#adminMachineId, #adminSerialNumber, #adminHospitalName, #adminUnitNumber, #adminRegion, #adminSubregion, #adminAddress', #adminCategory).forEach(i => i.value = '');
+                const ids = ['adminMachineId', 'adminSerialNumber', 'adminHospitalName', 'adminUnitNumber', 'adminRegion', 'adminSubregion'];
+                ids.forEach(id => document.getElementById(id).value = '');
+                document.getElementById('adminCategory').value = 'Non-KSO';
             }
 
             document.getElementById('clearFormBtn').addEventListener('click', clearForm);
 
-            // Logout manual (opsional, karena link sudah mengarah ke /admin/logout)
-            // Bisa tambahkan konfirmasi
-
-            // Load data saat halaman dimuat
             loadMetadataList();
         })();
     </script>
