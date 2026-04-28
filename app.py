@@ -89,7 +89,6 @@ class MachineMetadata(Base):
     region = Column(String(50))
     subregion = Column(String(50))
     category = Column(String(10), default='KSO')
-    address = Column(Text)
     registered_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
@@ -141,7 +140,6 @@ def get_all_machines_data(region_filter=None):
         MachineMetadata, Machine.machine_id == MachineMetadata.machine_id
     )
     
-    # Terapkan filter region jika ada
     if region_filter is not None:
         query = query.filter(MachineMetadata.region.in_(region_filter))
     
@@ -150,7 +148,7 @@ def get_all_machines_data(region_filter=None):
     if not results:
         return {}
 
-    # Query error count per machine (GROUP BY)
+    # Query error count per machine
     error_counts = {}
     error_count_query = db_session.query(
         Error.machine_id, func.count(Error.id).label('count')
@@ -158,9 +156,10 @@ def get_all_machines_data(region_filter=None):
     for row in error_count_query:
         error_counts[row.machine_id] = row.count
 
+    # Ambil semua konfigurasi maintenance aktif
     configs = db_session.query(MaintenanceConfig).filter_by(active=True).all()
-    items = [cfg.item_code for cfg in configs]
-    # Query untuk mendapatkan maintenance terakhir per mesin & item (timestamp & dialysis_count)
+
+    # Query untuk mendapatkan maintenance terakhir per mesin & item
     last_maint_subq = (
         db_session.query(
             Maintenance.machine_id,
@@ -180,7 +179,7 @@ def get_all_machines_data(region_filter=None):
         last_maint_subq.c.timestamp
     ).filter(last_maint_subq.c.rn == 1).all()
 
-    # Bangun dictionary: key = (machine_id, item) -> (dialysis_count, timestamp)
+    # Bangun dictionary last maintenance
     last_maint_dict = {}
     for row in last_maint_query:
         last_maint_dict[(row.machine_id, row.item)] = {
@@ -194,31 +193,32 @@ def get_all_machines_data(region_filter=None):
     for machine, metadata in results:
         machine_id = machine.machine_id
 
-        # Gunakan metadata jika ada, jika tidak fallback parsing
         if metadata:
             hospital_name = metadata.hospital_name
             unit_number = metadata.unit_number
             region = metadata.region
             subregion = metadata.subregion
-            serial_number = metadata.serial_number   # <-- ambil dari metadata
+            serial_number = metadata.serial_number
+            category = metadata.category
         else:
             fallback = parse_machine_id_fallback(machine_id)
             hospital_name = fallback['hospital_name']
             unit_number = fallback['unit_number']
             region = None
             subregion = None
-            serial_number = fallback['sn']           # fallback ke SN hasil parsing
+            serial_number = fallback['sn']
+            category = 'Non-KSO'
 
         error_count = error_counts.get(machine_id, 0)
 
-        # Evaluasi maintenance required untuk setiap item di config
+        # Evaluasi maintenance required
         maintenance_required = []
         for cfg in configs:
             item = cfg.item_code
             last_data = last_maint_dict.get((machine_id, item))
             need_maint = False
             treatments_since_last = None
-        
+
             if cfg.threshold_type == 'treatment_count':
                 last_dialysis_count = last_data['dialysis_count'] if last_data else 0
                 diff = machine.completed_dialysis - last_dialysis_count
@@ -229,19 +229,18 @@ def get_all_machines_data(region_filter=None):
                 if last_data and last_data['timestamp']:
                     last_time = last_data['timestamp']
                 else:
-                    # fallback ke registered_at dari metadata
                     if metadata and metadata.registered_at:
                         last_time = metadata.registered_at
                     else:
                         last_time = None
                 if last_time:
                     delta = current_time - last_time
-                    threshold_seconds = cfg.threshold_value * 30 * 24 * 3600  # aproksimasi 30 hari per bulan
+                    threshold_seconds = cfg.threshold_value * 30 * 24 * 3600
                     if delta.total_seconds() >= threshold_seconds:
                         need_maint = True
                 else:
-                    need_maint = True  # tidak ada baseline -> perlu maintenance
-        
+                    need_maint = True
+
             if need_maint:
                 maintenance_required.append({
                     'item': item,
@@ -276,13 +275,12 @@ def get_all_machines_data(region_filter=None):
             'total_dialysis_time': machine.total_dialysis_time,
             'completed_dialysis': machine.completed_dialysis,
             'current_dialysis_duration': current_dialysis_duration,
-            # Field tambahan dari metadata / fallback
             'hospital_name': hospital_name,
             'unit_number': unit_number,
             'region': region,
             'subregion': subregion,
             'serial_number': serial_number,
-            'category': metadata.category if metadata else 'KSO',
+            'category': category,
         }
 
     return result
@@ -698,7 +696,6 @@ def get_all_metadata():
                 'region': m.region,
                 'subregion': m.subregion,
                 'category': m.category,
-                'address': m.address,
                 'registered_at': m.registered_at.isoformat() if m.registered_at else None
             })
         return jsonify(result)
@@ -724,7 +721,6 @@ def get_metadata(machine_id):
                 'region': None,
                 'subregion': None,
                 'category': m.category,
-                'address': None,
                 'is_fallback': True
             })
         return jsonify({
@@ -734,8 +730,7 @@ def get_metadata(machine_id):
             'unit_number': metadata.unit_number,
             'region': metadata.region,
             'subregion': metadata.subregion,
-            'category': m.category,
-            'address': metadata.address,
+            'category': metadata.category,
             'is_fallback': False
         })
     except Exception as e:
@@ -774,7 +769,6 @@ def create_metadata():
             region=data.get('region'),
             subregion=data.get('subregion'),
             category=category,
-            address=data.get('address')
         )
         db_session.add(metadata)
         db_session.commit()
@@ -807,8 +801,8 @@ def update_metadata(machine_id):
         metadata.unit_number = data.get('unit_number', metadata.unit_number)
         metadata.region = data.get('region', metadata.region)
         metadata.subregion = data.get('subregion', metadata.subregion)
-        metadata.address = data.get('address', metadata.address)
         metadata.updated_at = datetime.utcnow()
+        metadata.category = data.get('category', metadata.category)
 
         db_session.commit()
         return jsonify({'success': True, 'message': 'Metadata updated'})
