@@ -463,6 +463,12 @@
                 <span>Ringkasan</span>
             </div>
         </div>
+        {% if session.get('role') %}
+        <div class="nav-item" id="navCategory">
+            <i class="fas fa-layer-group"></i>
+            <span>Kategori</span>
+        </div>
+        {% endif %}
         {% if session.get('role') == 'admin' %}
         <div class="nav-item" id="navAdminMetadata" onclick="window.location.href='/admin'">
             <i class="fas fa-database"></i>
@@ -504,6 +510,12 @@
             <div class="card-grid" id="regionGrid"></div>
         </div>
 
+        <div id="categoryView" class="view-container">
+            <div class="insights" id="categoryInsights"></div>
+            <div class="section-title">Pilih Kategori</div>
+            <div class="card-grid" id="categoryGrid"></div>
+        </div>
+        
         <div id="subregionView" class="view-container">
             <div class="insights" id="subregionInsights"></div>
             <div class="section-title">Pilih Subregion</div>
@@ -552,6 +564,9 @@
             // ---------- STATE MANAGEMENT ----------
             let machinesData = {};
             let machineCards = new Map();
+
+            let currentMode = 'normal';      // 'normal' atau 'category'
+            let selectedCategory = null;
             
             // Data terstruktur untuk grouping
             let regionGroups = {};      // region -> { subregions: { subregion -> { hospitals: { rsName -> { machines, stats } } } } }
@@ -639,11 +654,11 @@
             }
 
             // ---------- GROUPING & STATS BERDASARKAN REGION MAPPING ----------
-            function recomputeGroupsAndStats() {
+            function recomputeGroupsAndStats(data = machinesData) {
                 regionGroups = {};
                 globalStats = { total:0, hdOn:0, treatment:0, maintenance:0 };
             
-                Object.entries(machinesData).forEach(([id, m]) => {
+                Object.entries(data).forEach(([id, m]) => {
                     const region = m.region || 'Lainnya';
                     const subregion = m.subregion || 'Tidak Diketahui';
                     const hospitalName = m.hospital_name || 'Tanpa RS';
@@ -694,6 +709,14 @@
                     };
                     hosp.machines.push({ machineId: id, data: m, parsed });
                 });
+            }
+
+            function getFilteredMachinesByCategory(category) {
+                const filtered = {};
+                Object.entries(machinesData).forEach(([id, m]) => {
+                    if (m.category === category) filtered[id] = m;
+                });
+                return filtered;
             }
             
             // ---------- INSIGHTS RENDERING (Donut) ----------
@@ -754,6 +777,69 @@
                 }
             }
 
+
+            function renderCategoryCards() {
+                // Hitung statistik KSO dan Non-KSO
+                let ksoStats = { total:0, hdOn:0, treatment:0, maintenance:0 };
+                let nonKsoStats = { total:0, hdOn:0, treatment:0, maintenance:0 };
+                Object.values(machinesData).forEach(m => {
+                    const target = m.category === 'KSO' ? ksoStats : nonKsoStats;
+                    target.total++;
+                    if (m.status === 'running') target.hdOn++;
+                    if (m.pump_status === 'running') target.treatment++;
+                    if (m.maintenance_count > 0) target.maintenance++;
+                });
+            
+                const html = `
+                    <div class="region-card" data-category="KSO" style="cursor:pointer;">
+                        <div class="card-title">KSO</div>
+                        <div class="card-subtitle">${ksoStats.total} unit</div>
+                        <div class="card-stats">
+                            <span class="stat-dot"><span class="dot green"></span> ${ksoStats.hdOn}</span>
+                            <span class="stat-dot"><span class="dot blue"></span> ${ksoStats.treatment}</span>
+                            <span class="stat-dot"><span class="dot orange"></span> ${ksoStats.maintenance}</span>
+                        </div>
+                    </div>
+                    <div class="region-card" data-category="Non-KSO" style="cursor:pointer;">
+                        <div class="card-title">Non-KSO</div>
+                        <div class="card-subtitle">${nonKsoStats.total} unit</div>
+                        <div class="card-stats">
+                            <span class="stat-dot"><span class="dot green"></span> ${nonKsoStats.hdOn}</span>
+                            <span class="stat-dot"><span class="dot blue"></span> ${nonKsoStats.treatment}</span>
+                            <span class="stat-dot"><span class="dot orange"></span> ${nonKsoStats.maintenance}</span>
+                        </div>
+                    </div>
+                `;
+                document.getElementById('categoryGrid').innerHTML = html;
+            
+                // Event listener
+                document.querySelectorAll('.region-card[data-category]').forEach(card => {
+                    card.addEventListener('click', () => {
+                        selectedCategory = card.dataset.category;
+                        // Gunakan data terfilter
+                        const filteredData = getFilteredMachinesByCategory(selectedCategory);
+                        recomputeGroupsAndStats(filteredData);
+                        showRegionView();  // akan menampilkan region berdasarkan data terfilter
+                        currentMode = 'category';
+                        updateCategoryBreadcrumb();
+                    });
+                });
+            }
+
+            function showCategoryView() {
+                currentMode = 'normal';
+                selectedCategory = null;
+                viewTitle.textContent = 'Ringkasan Kategori';
+                backButton.classList.add('hidden');
+                hideAllViews();
+                document.getElementById('categoryView').classList.add('active');
+                // Insights menggunakan statistik global
+                recomputeGroupsAndStats(machinesData); // reset ke semua data
+                renderInsights(document.getElementById('categoryInsights'), globalStats);
+                renderCategoryCards();
+                updateCategoryBreadcrumb();
+            }
+            
             // ---------- RENDER CARDS (Region, Subregion, Hospital) ----------
             function renderRegionCards() {
                 const regions = Object.keys(regionGroups).sort();
@@ -949,6 +1035,7 @@
 
             // ---------- VIEW MANAGEMENT ----------
             function hideAllViews() {
+                categoryView.classList.remove('active');   // ← tambah baris ini
                 regionView.classList.remove('active');
                 subregionView.classList.remove('active');
                 hospitalView.classList.remove('active');
@@ -958,25 +1045,64 @@
 
             function updateBreadcrumb() {
                 let html = '';
-                if (currentView === 'region') {
-                    html = `<span>🏠 Nasional</span>`;
-                } else if (currentView === 'subregion') {
-                    html = `<span onclick="window.goToRegion()">🏠 Nasional</span> <i class="fas fa-chevron-right"></i> <span>${escapeHtml(selectedRegion)}</span>`;
-                } else if (currentView === 'hospital') {
-                    html = `<span onclick="window.goToRegion()">🏠 Nasional</span> <i class="fas fa-chevron-right"></i> <span onclick="window.goToSubregion()">${escapeHtml(selectedRegion)}</span> <i class="fas fa-chevron-right"></i> <span>${escapeHtml(selectedSubregion)}</span>`;
-                } else if (currentView === 'machine') {
-                    html = `<span onclick="window.goToRegion()">🏠 Nasional</span> <i class="fas fa-chevron-right"></i> <span onclick="window.goToSubregion()">${escapeHtml(selectedRegion)}</span> <i class="fas fa-chevron-right"></i> <span onclick="window.goToHospital()">${escapeHtml(selectedSubregion)}</span> <i class="fas fa-chevron-right"></i> <span>${escapeHtml(selectedHospital)}</span>`;
+                if (currentMode === 'category') {
+                    // Mode kategori, breadcrumb dimulai dari "Kategori"
+                    if (currentView === 'region') {
+                        html = `<span onclick="window.goToCategory()">📂 Kategori</span> <i class="fas fa-chevron-right"></i> <span>${escapeHtml(selectedCategory)}</span>`;
+                    } else if (currentView === 'subregion') {
+                        html = `<span onclick="window.goToCategory()">📂 Kategori</span> <i class="fas fa-chevron-right"></i> <span onclick="window.goToRegion()">${escapeHtml(selectedCategory)}</span> <i class="fas fa-chevron-right"></i> <span>${escapeHtml(selectedRegion)}</span>`;
+                    } else if (currentView === 'hospital') {
+                        html = `<span onclick="window.goToCategory()">📂 Kategori</span> <i class="fas fa-chevron-right"></i> <span onclick="window.goToRegion()">${escapeHtml(selectedCategory)}</span> <i class="fas fa-chevron-right"></i> <span onclick="window.goToSubregion()">${escapeHtml(selectedRegion)}</span> <i class="fas fa-chevron-right"></i> <span>${escapeHtml(selectedSubregion)}</span>`;
+                    } else if (currentView === 'machine') {
+                        html = `<span onclick="window.goToCategory()">📂 Kategori</span> <i class="fas fa-chevron-right"></i> <span onclick="window.goToRegion()">${escapeHtml(selectedCategory)}</span> <i class="fas fa-chevron-right"></i> <span onclick="window.goToSubregion()">${escapeHtml(selectedRegion)}</span> <i class="fas fa-chevron-right"></i> <span onclick="window.goToHospital()">${escapeHtml(selectedSubregion)}</span> <i class="fas fa-chevron-right"></i> <span>${escapeHtml(selectedHospital)}</span>`;
+                    }
+                } else {
+                    // Mode normal (semua data), breadcrumb seperti semula
+                    if (currentView === 'region') {
+                        html = `<span>🏠 Nasional</span>`;
+                    } else if (currentView === 'subregion') {
+                        html = `<span onclick="window.goToRegion()">🏠 Nasional</span> <i class="fas fa-chevron-right"></i> <span>${escapeHtml(selectedRegion)}</span>`;
+                    } else if (currentView === 'hospital') {
+                        html = `<span onclick="window.goToRegion()">🏠 Nasional</span> <i class="fas fa-chevron-right"></i> <span onclick="window.goToSubregion()">${escapeHtml(selectedRegion)}</span> <i class="fas fa-chevron-right"></i> <span>${escapeHtml(selectedSubregion)}</span>`;
+                    } else if (currentView === 'machine') {
+                        html = `<span onclick="window.goToRegion()">🏠 Nasional</span> <i class="fas fa-chevron-right"></i> <span onclick="window.goToSubregion()">${escapeHtml(selectedRegion)}</span> <i class="fas fa-chevron-right"></i> <span onclick="window.goToHospital()">${escapeHtml(selectedSubregion)}</span> <i class="fas fa-chevron-right"></i> <span>${escapeHtml(selectedHospital)}</span>`;
+                    }
                 }
                 breadcrumb.innerHTML = html;
             }
 
             // Fungsi navigasi global (dipanggil dari breadcrumb)
-            window.goToRegion = function() {
+            // Kembali ke halaman kategori (jika dalam mode kategori)
+            window.goToCategory = function() {
                 selectedRegion = null;
                 selectedSubregion = null;
                 selectedHospital = null;
+                showCategoryView();
+            };
+            
+            // Kembali ke region (dari subregion/hospital/machine) – sudah ada, tapi perlu ditambah untuk mode kategori
+            window.goToRegion = function() {
+                selectedSubregion = null;
+                selectedHospital = null;
+                // Jika dalam mode kategori, jangan reset selected region? 
+                // Kode asli: selectedRegion = null; 
+                // Untuk mode kategori, kita ingin kembali ke region dari subregion, bukan reset region.
+                // Tapi fungsi ini juga dipanggil dari breadcrumb "Nasional" yang ingin kembali ke region view normal (non-kategori).
+                // Jadi kita perlu bedakan: window.goToRegion untuk mode normal, dan untuk mode kategori kita gunakan window.goToRegionFromCategory jika perlu.
+                // Agar aman, kita biarkan fungsi asli tetap, tapi saat dari kategori kita panggil showRegionView() dengan filter.
+                // Di bawah ini kita override goToRegion agar mempertahankan selectedRegion jika currentMode === 'category'.
+                if (currentMode === 'category') {
+                    // Jangan reset selectedRegion, hanya reset subregion dan hospital
+                    selectedSubregion = null;
+                    selectedHospital = null;
+                } else {
+                    selectedRegion = null;
+                    selectedSubregion = null;
+                    selectedHospital = null;
+                }
                 showRegionView();
             };
+            
             window.goToSubregion = function() {
                 if (selectedRegion) {
                     selectedSubregion = null;
@@ -984,6 +1110,7 @@
                     showSubregionView();
                 }
             };
+            
             window.goToHospital = function() {
                 if (selectedRegion && selectedSubregion) {
                     selectedHospital = null;
@@ -992,16 +1119,25 @@
             };
 
             function showRegionView() {
-                currentView = 'region';
+            currentView = 'region';
+            // Tampilan judul bergantung pada mode
+            if (currentMode === 'category') {
+                viewTitle.textContent = `Kategori: ${selectedCategory}`;
+                // Gunakan data mesin yang sudah difilter
+                const filteredData = getFilteredMachinesByCategory(selectedCategory);
+                recomputeGroupsAndStats(filteredData);
+            } else {
                 viewTitle.textContent = 'Ringkasan Nasional';
-                backButton.classList.add('hidden');
-                navHome.classList.add('active');
-                hideAllViews();
-                regionView.classList.add('active');
-                renderInsights(regionInsights, globalStats);
-                renderRegionCards();
-                updateBreadcrumb();
+                recomputeGroupsAndStats(machinesData);
             }
+            backButton.classList.add('hidden');   // di level region, back tidak ditampilkan (atau bisa diatur)
+            navHome.classList.add('active');
+            hideAllViews();
+            regionView.classList.add('active');
+            renderInsights(regionInsights, globalStats);
+            renderRegionCards();
+            updateBreadcrumb();
+        }
 
             function showSubregionView() {
                 if (!selectedRegion) return;
@@ -1047,17 +1183,43 @@
 
             // Back button handler
             backButton.addEventListener('click', () => {
-                if (currentView === 'subregion') {
-                    goToRegion();
-                } else if (currentView === 'hospital') {
-                    goToSubregion();
-                } else if (currentView === 'machine') {
-                    goToHospital();
+                if (currentMode === 'category') {
+                    if (currentView === 'subregion') {
+                        window.goToRegion();   // kembali ke region (tanpa reset category)
+                    } else if (currentView === 'hospital') {
+                        window.goToSubregion();
+                    } else if (currentView === 'machine') {
+                        window.goToHospital();
+                    } else if (currentView === 'region') {
+                        window.goToCategory(); // kembali ke halaman pilih kategori
+                    }
+                } else {
+                    // mode normal
+                    if (currentView === 'subregion') {
+                        window.goToRegion();
+                    } else if (currentView === 'hospital') {
+                        window.goToSubregion();
+                    } else if (currentView === 'machine') {
+                        window.goToHospital();
+                    }
                 }
             });
 
             // Nav home
-            navHome.addEventListener('click', goToRegion);
+            // Nav Home (Ringkasan Nasional)
+            navHome.addEventListener('click', () => {
+                currentMode = 'normal';
+                selectedCategory = null;
+                goToRegion();  // akan mereset semua filter dan menampilkan semua data
+            });
+            
+            // Nav Category
+            const navCategory = document.getElementById('navCategory');
+            if (navCategory) {
+                navCategory.addEventListener('click', () => {
+                    showCategoryView();
+                });
+            }
 
             // ---------- MAINTENANCE MODAL ----------
             function showMaintenanceModal(machineId, items) {
