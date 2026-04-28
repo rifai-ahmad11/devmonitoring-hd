@@ -827,17 +827,22 @@
             }
 
             function showCategoryView() {
-                currentMode = 'normal';
-                selectedCategory = null;
+                currentMode = 'category';
+                currentView = 'region';  // setelah klik kategori, kita langsung masuk ke region view dengan filter
+                // Tapi alurnya: klik kategori → muncul dua kartu → klik kartu → region view terfilter.
+                // Jadi sebaiknya kita tampilkan view kategori (categoryView) dengan dua kartu, bukan langsung region.
+                // Maka kita set currentView = 'category' (idealnya ada view khusus, atau gunakan regionView dengan kartu kategori).
+                // Dari deskripsi Anda, setelah klik Kategori di sidebar, tampilkan halaman dengan dua kartu KSO dan Non-KSO.
+                // Itu adalah viewCategory. Maka:
+                currentView = 'category';  // tambahkan ini jika kita punya state untuk categoryView
                 viewTitle.textContent = 'Ringkasan Kategori';
                 backButton.classList.add('hidden');
                 hideAllViews();
                 document.getElementById('categoryView').classList.add('active');
-                // Insights menggunakan statistik global
-                recomputeGroupsAndStats(machinesData); // reset ke semua data
+                // Insights untuk semua mesin (bisa pakai globalStats)
                 renderInsights(document.getElementById('categoryInsights'), globalStats);
                 renderCategoryCards();
-                updateCategoryBreadcrumb();
+                updateCategoryBreadcrumb(); // kita bisa buat fungsi terpisah
             }
             
             // ---------- RENDER CARDS (Region, Subregion, Hospital) ----------
