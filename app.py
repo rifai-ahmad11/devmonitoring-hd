@@ -195,6 +195,22 @@ def get_all_machines_data(region_filter=None, subregion_filter=None):
             'timestamp': row.timestamp
         }
 
+      # Ambil humidity terbaru per mesin
+    humidity_subq = db_session.query(
+        HumidityLog.machine_id,
+        HumidityLog.humidity,
+        func.row_number().over(
+            partition_by=HumidityLog.machine_id,
+            order_by=desc(HumidityLog.timestamp)
+        ).label('rn')
+    ).subquery()
+    latest_humidity = db_session.query(
+        humidity_subq.c.machine_id,
+        humidity_subq.c.humidity
+    ).filter(humidity_subq.c.rn == 1).all()
+    humidity_map = {row.machine_id: row.humidity for row in latest_humidity}
+
+  
     current_time = datetime.now()
     result = {}
 
@@ -259,21 +275,6 @@ def get_all_machines_data(region_filter=None, subregion_filter=None):
                     'time_unit': cfg.time_unit,
                     'treatments_since_last': treatments_since_last
                 })
-
-    # Ambil humidity terbaru per mesin
-    humidity_subq = db_session.query(
-        HumidityLog.machine_id,
-        HumidityLog.humidity,
-        func.row_number().over(
-            partition_by=HumidityLog.machine_id,
-            order_by=desc(HumidityLog.timestamp)
-        ).label('rn')
-    ).subquery()
-    latest_humidity = db_session.query(
-        humidity_subq.c.machine_id,
-        humidity_subq.c.humidity
-    ).filter(humidity_subq.c.rn == 1).all()
-    humidity_map = {row.machine_id: row.humidity for row in latest_humidity}
 
         # Durasi sesi saat ini
         current_session_duration = 0
