@@ -134,7 +134,7 @@ def stop_dialysis_session_db(machine: Machine, current_time: datetime):
         machine.dialysis_session_start = None
         machine.pump_status = 'stopped'
 
-def get_all_machines_data(region_filter=None):
+def get_all_machines_data(region_filter=None, subregion_filter=None):
     # Query join machines dan metadata
     query = db_session.query(Machine, MachineMetadata).outerjoin(
         MachineMetadata, Machine.machine_id == MachineMetadata.machine_id
@@ -142,7 +142,8 @@ def get_all_machines_data(region_filter=None):
     
     if region_filter is not None:
         query = query.filter(MachineMetadata.region.in_(region_filter))
-    
+    if subregion_filter is not None:
+        query = query.filter(MachineMetadata.subregion.in_(subregion_filter))
     results = query.all()
 
     if not results:
@@ -380,7 +381,7 @@ def login():
             session['user_id'] = user.id
             session['username'] = user.username
             session['role'] = user.role
-            session['assigned_regions'] = user.assigned_regions if user.role == 'teknisi' else []
+            session['assigned_subregions'] = user.assigned_regions if user.role == 'teknisi' else []
             session['logged_in'] = True
             return redirect(url_for('index'))
         else:
@@ -406,10 +407,10 @@ def get_machines():
     """Mengembalikan data semua machine sesuai hak akses user."""
     try:
         if session.get('role') == 'teknisi':
-            allowed_regions = session.get('assigned_regions', [])
-            if not allowed_regions:
+            allowed_subregions = session.get('assigned_subregions', [])
+            if not allowed_subregions:
                 return jsonify({})
-            result = get_all_machines_data(region_filter=allowed_regions)
+            result = get_all_machines_data(subregion_filter=allowed_subregions)
         else:
             # Admin: tanpa filter (region_filter=None)
             result = get_all_machines_data()
