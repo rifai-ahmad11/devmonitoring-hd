@@ -113,6 +113,13 @@ class MaintenanceConfig(Base):
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
+class HumidityLog(Base):
+    __tablename__ = 'humidity_logs'
+    id = Column(Integer, primary_key=True)
+    machine_id = Column(String(50), ForeignKey('machines.machine_id'))
+    humidity = Column(Float)
+    timestamp = Column(DateTime, default=datetime.utcnow)
+
 # Buat tabel jika belum ada
 Base.metadata.create_all(bind=engine)
 
@@ -253,6 +260,21 @@ def get_all_machines_data(region_filter=None, subregion_filter=None):
                     'treatments_since_last': treatments_since_last
                 })
 
+      # Ambil humidity terbaru per mesin
+      humidity_subq = db_session.query(
+          HumidityLog.machine_id,
+          HumidityLog.humidity,
+          func.row_number().over(
+              partition_by=HumidityLog.machine_id,
+              order_by=desc(HumidityLog.timestamp)
+          ).label('rn')
+      ).subquery()
+      latest_humidity = db_session.query(
+          humidity_subq.c.machine_id,
+          humidity_subq.c.humidity
+      ).filter(humidity_subq.c.rn == 1).all()
+      humidity_map = {row.machine_id: row.humidity for row in latest_humidity}
+
         # Durasi sesi saat ini
         current_session_duration = 0
         if machine.status == 'running' and machine.current_session_start:
@@ -282,6 +304,7 @@ def get_all_machines_data(region_filter=None, subregion_filter=None):
             'subregion': subregion,
             'serial_number': serial_number,
             'category': category,
+            'humidity': humidity_map.get(machine_id)
         }
 
     return result
@@ -481,6 +504,26 @@ def log_error():
         print(f"Error logging error: {e}")
         traceback.print_exc()
         return jsonify({'error': 'Internal server error'}), 500
+
+@app.route('/humidity', methods=['POST'])
+def log_humidity():
+    try:
+        data = request.get_json()
+        machine_id_raw = data.get('machine_id')
+        humidity = data.get('humidity')
+        if not machine_id_raw or humidity is None:
+            return jsonify({'error': 'Missing machine_id or humidity'}), 400
+
+        machine_id = normalize_machine_id(machine_id_raw)
+
+        log = HumidityLog(machine_id=machine_id, humidity=humidity)
+        db_session.add(log)
+        db_session.commit()
+        return jsonify({'success': True})
+    except Exception as e:
+        db_session.rollback()
+        print(f"Error logging humidity: {e}")
+        return jsonify({'error': str(e)}), 500
 
 @app.route('/update', methods=['POST'])
 def update_machine_status():
