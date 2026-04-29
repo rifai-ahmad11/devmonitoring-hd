@@ -964,6 +964,10 @@
                         <div class="stat-row"><span class="stat-label">Total Treatment</span><span class="stat-value" data-field="totalDialysis">${formatTime(data.total_dialysis_time||0)}</span></div>
                         <div class="stat-row"><span class="stat-label">Treatment Selesai</span><span class="stat-value" data-field="completedDialysis">${data.completed_dialysis||0}</span></div>
                     </div>
+                    <div class="stat-row">
+                        <span class="stat-label">Kelembapan</span>
+                        <span class="stat-value">${data.humidity != null ? data.humidity.toFixed(1) + '%' : 'N/A'}</span>
+                    </div>
                     <div class="last-update" data-field="lastUpdate">Update: ${formatDateTime(data.last_update)}</div>
                 `;
             
@@ -1001,6 +1005,10 @@
                 element.querySelector('[data-field="totalDialysis"]').textContent = formatTime(newData.total_dialysis_time||0);
                 element.querySelector('[data-field="completedDialysis"]').textContent = newData.completed_dialysis||0;
                 element.querySelector('[data-field="lastUpdate"]').textContent = `Update: ${formatDateTime(newData.last_update)}`;
+                const humidityEl = element.querySelector('[data-field="humidity"]');
+                if (humidityEl) {
+                    humidityEl.textContent = newData.humidity != null ? newData.humidity.toFixed(1) + '%' : 'N/A';
+                }
             }
 
             function syncMachineGrid(hospitalName) {
