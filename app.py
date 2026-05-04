@@ -1,11 +1,12 @@
 import os
 from flask import Flask, render_template, request, jsonify, session, redirect, url_for
 from datetime import datetime, timedelta
+from datetime import date as date_type
 from functools import wraps
 import threading
 import time
 import traceback
-from sqlalchemy import create_engine, Column, String, Float, Integer, DateTime, Text, func, and_, desc, Index, ForeignKey, Boolean
+from sqlalchemy import create_engine, Column, String, Float, Integer, DateTime, Text, func, and_, desc, Index, ForeignKey, Boolean, Date
 from sqlalchemy.orm import declarative_base, sessionmaker, scoped_session, relationship
 from werkzeug.security import generate_password_hash, check_password_hash
 from sqlalchemy import ARRAY
@@ -89,6 +90,7 @@ class MachineMetadata(Base):
     region = Column(String(50))
     subregion = Column(String(50))
     category = Column(String(10), default='KSO')
+    installation_date = Column(Date, nullable=True)   # tanggal instalasi mesin
     registered_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
@@ -253,8 +255,14 @@ def get_all_machines_data(region_filter=None, subregion_filter=None):
                 if last_data and last_data['timestamp']:
                     last_time = last_data['timestamp']
                 else:
-                    if metadata and metadata.registered_at:
-                        last_time = metadata.registered_at
+                    if metadata:
+                        if metadata.installation_date:
+                            # Gabungkan tanggal instalasi dengan jam 00:00:00
+                            last_time = datetime.combine(metadata.installation_date, datetime.min.time())
+                        elif metadata.registered_at:
+                            last_time = metadata.registered_at
+                        else:
+                            last_time = None
                     else:
                         last_time = None
                 if last_time:
@@ -741,6 +749,7 @@ def get_all_metadata():
                 'region': m.region,
                 'subregion': m.subregion,
                 'category': m.category,
+                'installation_date': m.installation_date.isoformat() if m.installation_date else None,
                 'registered_at': m.registered_at.isoformat() if m.registered_at else None
             })
         return jsonify(result)
@@ -760,12 +769,13 @@ def get_metadata(machine_id):
             fallback = parse_machine_id_fallback(machine_id)
             return jsonify({
                 'machine_id': machine_id,
-                'serial_number': fallback['serial_number'],
+                'serial_number': fallback['sn'],
                 'hospital_name': fallback['hospital_name'],
                 'unit_number': fallback['unit_number'],
                 'region': None,
                 'subregion': None,
-                'category': m.category,
+                'category': 'Non-KSO',
+                'installation_date': None,
                 'is_fallback': True
             })
         return jsonify({
@@ -776,6 +786,8 @@ def get_metadata(machine_id):
             'region': metadata.region,
             'subregion': metadata.subregion,
             'category': metadata.category,
+            'installation_date': metadata.installation_date.isoformat() if metadata.installation_date else None,
+            'registered_at': metadata.registered_at.isoformat() if metadata.registered_at else None,
             'is_fallback': False
         })
     except Exception as e:
@@ -806,6 +818,10 @@ def create_metadata():
         if existing:
             return jsonify({'error': 'Metadata already exists, use PUT to update'}), 409
 
+        # Parsing installation_date
+        inst_date_str = data.get('installation_date')
+        installation_date = date.fromisoformat(inst_date_str) if inst_date_str else None
+      
         metadata = MachineMetadata(
             machine_id=machine_id,
             serial_number=data.get('serial_number'),
@@ -814,6 +830,7 @@ def create_metadata():
             region=data.get('region'),
             subregion=data.get('subregion'),
             category=category,
+            installation_date=installation_date,
         )
         db_session.add(metadata)
         db_session.commit()
@@ -848,6 +865,10 @@ def update_metadata(machine_id):
         metadata.subregion = data.get('subregion', metadata.subregion)
         metadata.updated_at = datetime.utcnow()
         metadata.category = data.get('category', metadata.category)
+
+        inst_date_str = data.get('installation_date')
+        if inst_date_str is not None:
+            metadata.installation_date = date.fromisoformat(inst_date_str) if inst_date_str else None
 
         db_session.commit()
         return jsonify({'success': True, 'message': 'Metadata updated'})
