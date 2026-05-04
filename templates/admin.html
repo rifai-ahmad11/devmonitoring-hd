@@ -206,6 +206,10 @@
                     <option value="Non-KSO">Non-KSO</option>
                     <option value="KSO">KSO</option>
                 </select>
+                <div style="display: flex; flex-direction: column;">
+                    <label for="adminInstallationDate" style="font-size:12px; color:#666;">Tanggal Instalasi</label>
+                    <input type="date" id="adminInstallationDate" style="padding:12px;">
+                </div>
             </div>
             <div style="display: flex; gap: 15px; margin-top: 15px;">
                 <button id="adminSaveBtn" class="btn-primary"><i class="fas fa-save"></i> Simpan Metadata</button>
@@ -375,6 +379,7 @@
                             document.getElementById('adminRegion').value = data.region || '';
                             document.getElementById('adminSubregion').value = data.subregion || '';
                             document.getElementById('adminCategory').value = data.category || 'Non-KSO';
+                            document.getElementById('adminInstallationDate').value = data.installation_date || '';
                             
                             document.querySelector('.card').scrollIntoView({ behavior: 'smooth' });
                         } catch (err) {
@@ -424,6 +429,7 @@
                     region: document.getElementById('adminRegion').value.trim() || null,
                     subregion: document.getElementById('adminSubregion').value.trim() || null,
                     category: document.getElementById('adminCategory').value || 'Non-KSO'
+                    installation_date: document.getElementById('adminInstallationDate').value || null
                 };
 
                 try {
