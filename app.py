@@ -122,6 +122,13 @@ class HumidityLog(Base):
     humidity = Column(Float)
     timestamp = Column(DateTime, default=datetime.utcnow)
 
+class VoltageLog(Base):
+    __tablename__ = 'voltage_logs'
+    id = Column(Integer, primary_key=True)
+    machine_id = Column(String(50), ForeignKey('machines.machine_id'))
+    voltage = Column(Float)
+    timestamp = Column(DateTime, default=datetime.utcnow)
+  
 # Buat tabel jika belum ada
 Base.metadata.create_all(bind=engine)
 
@@ -532,6 +539,43 @@ def log_humidity():
     except Exception as e:
         db_session.rollback()
         print(f"Error logging humidity: {e}")
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/voltage', methods=['POST'])
+def log_voltage():
+    try:
+        data = request.get_json()
+        machine_id_raw = data.get('machine_id')
+        voltage = data.get('voltage')
+        if not machine_id_raw or voltage is None:
+            return jsonify({'error': 'Missing machine_id or voltage'}), 400
+
+        machine_id = normalize_machine_id(machine_id_raw)
+        log = VoltageLog(machine_id=machine_id, voltage=voltage)
+        db_session.add(log)
+        db_session.commit()
+        return jsonify({'success': True})
+    except Exception as e:
+        db_session.rollback()
+        print(f"Error logging voltage: {e}")
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/voltage-log/<machine_id>', methods=['GET'])
+@login_required
+def get_voltage_log(machine_id):
+    try:
+        logs = db_session.query(VoltageLog).filter_by(machine_id=machine_id)\
+                .order_by(desc(VoltageLog.timestamp)).limit(20).all()
+        result = []
+        for l in logs:
+            result.append({
+                'id': l.id,
+                'voltage': l.voltage,
+                'timestamp': l.timestamp.isoformat()
+            })
+        return jsonify(result)
+    except Exception as e:
         return jsonify({'error': str(e)}), 500
 
 @app.route('/update', methods=['POST'])
