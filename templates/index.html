@@ -266,6 +266,27 @@
             padding: 18px 18px 14px;
             box-shadow: 0 12px 24px rgba(0, 0, 0, 0.15);
             transition: all 0.2s;
+            position: relative;
+        }
+        .voltage-icon {
+            position: absolute;
+            bottom: 10px;
+            left: 10px;
+            font-size: 1.4em;
+            color: #FFA500;
+            cursor: pointer;
+            z-index: 5;
+        }
+        .voltage-list {
+            list-style: none;
+            padding: 0;
+            margin-top: 15px;
+        }
+        .voltage-list li {
+            display: flex;
+            justify-content: space-between;
+            padding: 8px 0;
+            border-bottom: 1px solid #eee;
         }
         .machine-header {
             display: flex;
@@ -555,6 +576,20 @@
         </div>
     </div>
 
+   <!-- Voltage Modal (letakkan di sini) -->
+    <div id="voltageModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 class="modal-title">⚡ Tegangan Jala-Jala</h2>
+                <button class="close-button" id="closeVoltageModal">&times;</button>
+            </div>
+            <div class="modal-body">
+                <span class="machine-id-modal">Serial Number: <span id="voltageModalMachineId"></span></span>
+                <ul class="voltage-list" id="voltageList"></ul>
+            </div>
+        </div>
+    </div>
+
     <script>
         (function(){
             // ---------- REGION MAPPING (OPSI A) ----------
@@ -614,6 +649,48 @@
             const CIRCLE_RADIUS = 36;
             const CIRCUMFERENCE = 2 * Math.PI * CIRCLE_RADIUS;
 
+            // Voltage modal elements
+            const voltageModal = document.getElementById('voltageModal');
+            const voltageModalMachineId = document.getElementById('voltageModalMachineId');
+            const voltageList = document.getElementById('voltageList');
+            const closeVoltageModalBtn = document.getElementById('closeVoltageModal');
+            
+            closeVoltageModalBtn.addEventListener('click', () => voltageModal.style.display = 'none');
+            window.addEventListener('click', (e) => { if (e.target === voltageModal) voltageModal.style.display = 'none'; });
+            
+            // Delegasi klik pada ikon voltage (karena ikon dimasukkan secara dinamis)
+            document.addEventListener('click', async (e) => {
+                if (e.target.classList.contains('voltage-icon')) {
+                    const machineId = e.target.dataset.machine;
+                    if (!machineId) return;
+                    // Ambil data machine untuk SN
+                    const machine = machinesData[machineId];
+                    const sn = machine ? (machine.serial_number || machineId) : machineId;
+                    voltageModalMachineId.textContent = sn;
+                    voltageList.innerHTML = '<li>Memuat data...</li>';
+                    voltageModal.style.display = 'block';
+                    try {
+                        const res = await fetch(`/api/voltage-log/${machineId}`);
+                        if (!res.ok) throw new Error('Gagal fetch');
+                        const logs = await res.json();
+                        voltageList.innerHTML = '';
+                        if (logs.length === 0) {
+                            voltageList.innerHTML = '<li>Tidak ada data tegangan.</li>';
+                        } else {
+                            logs.forEach(log => {
+                                const li = document.createElement('li');
+                                const date = new Date(log.timestamp);
+                                const timeStr = date.toLocaleString('id-ID', { hour:'2-digit', minute:'2-digit', second:'2-digit', day:'2-digit', month:'2-digit', year:'numeric' });
+                                li.innerHTML = `<span>${escapeHtml(timeStr)}</span><span>${log.voltage.toFixed(1)} V</span>`;
+                                voltageList.appendChild(li);
+                            });
+                        }
+                    } catch (err) {
+                        voltageList.innerHTML = '<li>Gagal memuat data.</li>';
+                    }
+                }
+            });
+            
             // ---------- HELPERS ----------
             function parseMachineId(fullId) {
                 const parts = fullId.split('-');
@@ -969,7 +1046,8 @@
                         <span class="stat-value">${data.humidity != null ? data.humidity.toFixed(1) + '%' : 'N/A'}</span>
                     </div>
                     <div class="last-update" data-field="lastUpdate">Update: ${formatDateTime(data.last_update)}</div>
-                `;
+                    `<i class="fas fa-bolt voltage-icon" data-machine="${machineId}" title="Lihat tegangan"></i>`
+                ;
             
                 const badge = div.querySelector('.maintenance-badge');
                 badge.addEventListener('click', (e) => {
