@@ -724,7 +724,7 @@
             }
 
             function getMainStatus(m) {
-                if (m.maintenance_count > 0) return 'maintenance';
+                //if (m.maintenance_count > 0) return 'maintenance';
                 if (m.pump_status === 'running') return 'treatment';
                 if (m.status === 'running') return 'running';
                 return 'stopped';
@@ -1015,7 +1015,7 @@
                 let statusClass = 'stopped', statusText = 'HD OFF';
                 if (mainStatus === 'running') { statusClass = 'running'; statusText = 'HD ON'; }
                 else if (mainStatus === 'treatment') { statusClass = 'treatment'; statusText = 'TREATMENT'; }
-                else if (mainStatus === 'maintenance') { statusClass = 'maintenance'; statusText = 'MAINTENANCE'; }
+                //else if (mainStatus === 'maintenance') { statusClass = 'maintenance'; statusText = 'MAINTENANCE'; }
             
                 const unitText = data.unit_number ? `Unit ${data.unit_number}` : '';
                 const hospitalDisplay = data.hospital_name || 'Tanpa RS';
@@ -1064,7 +1064,7 @@
                 let statusClass = 'stopped', statusText = 'IDLE';
                 if (mainStatus === 'running') { statusClass = 'running'; statusText = 'HD ON'; }
                 else if (mainStatus === 'treatment') { statusClass = 'treatment'; statusText = 'TREATMENT'; }
-                else if (mainStatus === 'maintenance') { statusClass = 'maintenance'; statusText = 'MAINTENANCE'; }
+                //else if (mainStatus === 'maintenance') { statusClass = 'maintenance'; statusText = 'MAINTENANCE'; }
                 statusBadge.className = `status-badge ${statusClass}`;
                 statusBadge.textContent = statusText;
                 
