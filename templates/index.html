@@ -1046,8 +1046,8 @@
                         <span class="stat-value">${data.humidity != null ? data.humidity.toFixed(1) + '%' : 'N/A'}</span>
                     </div>
                     <div class="last-update" data-field="lastUpdate">Update: ${formatDateTime(data.last_update)}</div>
-                    `<i class="fas fa-bolt voltage-icon" data-machine="${machineId}" title="Lihat tegangan"></i>`
-                ;
+                    <i class="fas fa-bolt voltage-icon" data-machine="${machineId}" title="Lihat tegangan"></i>
+                `;
             
                 const badge = div.querySelector('.maintenance-badge');
                 badge.addEventListener('click', (e) => {
