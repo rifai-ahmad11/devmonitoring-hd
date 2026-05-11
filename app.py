@@ -566,7 +566,7 @@ def log_voltage():
 def get_voltage_log(machine_id):
     try:
         logs = db_session.query(VoltageLog).filter_by(machine_id=machine_id)\
-                .order_by(desc(VoltageLog.timestamp)).limit(20).all()
+                .order_by(desc(VoltageLog.timestamp)).limit(50).all()
         result = []
         for l in logs:
             result.append({
