@@ -567,11 +567,7 @@
                 <span class="machine-id-modal">Serial Number: <span id="modalMachineId"></span></span>
                 <p style="margin:15px 0; color:#666;">Komponen yang memerlukan perawatan:</p>
                 <ul class="maintenance-list" id="maintenanceList"></ul>
-                <div class="threshold-info">
-                    <strong>📋 Threshold Maintenance:</strong><br>
-                    Filter Endotoksin: Setiap 200 kali treatment
-                </div>
-                <div class="threshold-note">*Note: Threshold ini merupakan estimasi.</div>
+                <p style="margin-top:15px; color:#666; font-size:13px;">* Threshold dapat disesuaikan oleh admin di halaman konfigurasi.</p>
             </div>
         </div>
     </div>
@@ -1327,13 +1323,32 @@
                     items.forEach(item => {
                         const li = document.createElement('li');
                         li.className = 'maintenance-item';
+                    
+                        // 1. Bangun teks threshold yang sesuai tipe
+                        let thresholdText = '';
+                        if (item.threshold_type === 'treatment_count') {
+                            thresholdText = `${item.threshold_value} treatment`;
+                        } else if (item.threshold_type === 'time_interval') {
+                            thresholdText = `${item.threshold_value} ${item.time_unit || 'hari'}`;
+                        } else {
+                            thresholdText = `${item.threshold_value}`;  // fallback
+                        }
+                    
+                        // 2. Info "Sejak terakhir" atau "Interval"
+                        let infoText = '';
+                        if (item.threshold_type === 'treatment_count' && item.treatments_since_last != null) {
+                            infoText = `Treatment sejak terakhir penggantian: ${item.treatments_since_last}`;
+                        } else if (item.threshold_type === 'time_interval') {
+                            infoText = `Interval waktu`;   // atau biarkan kosong
+                        }
+                    
                         li.innerHTML = `
                             <div class="maintenance-item-header">
                                 <div class="maintenance-item-title">⚠️ ${escapeHtml(item.name)}</div>
                                 <button class="mark-done-btn" data-machine="${machineId}" data-item="${escapeHtml(item.item)}">✓ Selesai</button>
                             </div>
                             <div class="maintenance-item-desc">${escapeHtml(item.description)}</div>
-                            <div>Threshold: ${item.threshold} treatment | Sejak terakhir: ${item.treatments_since_last}</div>
+                            <div>Threshold: ${thresholdText} | ${infoText}</div>
                         `;
                         maintenanceList.appendChild(li);
                     });
