@@ -572,7 +572,7 @@ def get_voltage_log(machine_id):
             result.append({
                 'id': l.id,
                 'voltage': l.voltage,
-                'timestamp': l.timestamp.isoformat()
+                'timestamp': l.timestamp.isoformat() + 'Z'   # ← tambahkan Z
             })
         return jsonify(result)
     except Exception as e:
