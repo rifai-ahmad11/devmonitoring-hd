@@ -725,9 +725,8 @@
             
             function toWIBString(iso) {
                 if (!iso) return 'Belum update';
-                const d = new Date(iso);
-                // Geser +7 jam dari UTC
-                const wib = new Date(d.getTime() + 7 * 60 * 60 * 1000);
+                const d = new Date(iso);                     // parse UTC
+                const wib = new Date(d.getTime() + 7 * 60 * 60 * 1000);  // tambah 7 jam
                 const dd = String(wib.getUTCDate()).padStart(2, '0');
                 const mm = String(wib.getUTCMonth() + 1).padStart(2, '0');
                 const yyyy = wib.getUTCFullYear();
