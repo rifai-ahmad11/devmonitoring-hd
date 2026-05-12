@@ -580,7 +580,7 @@
                 <button class="close-button" id="closeVoltageModal">&times;</button>
             </div>
             <div class="modal-body">
-                <span class="machine-id-modal">Serial Number: <span id="voltageModalMachineId"></span></span>
+                <div class="machine-id-modal" id="voltageModalMachineId"></div>
                 <ul class="voltage-list" id="voltageList"></ul>
             </div>
         </div>
@@ -662,7 +662,13 @@
                     // Ambil data machine untuk SN
                     const machine = machinesData[machineId];
                     const sn = machine ? (machine.serial_number || machineId) : machineId;
-                    voltageModalMachineId.textContent = sn;
+                    const mid = machineId; // machine_id asli
+                    
+                    // Tampilkan di modal
+                    document.getElementById('voltageModalMachineId').innerHTML = `
+                        <div>Serial Number: ${escapeHtml(sn)}</div>
+                        <div style="font-size:0.9em; color:#555;">Machine ID: ${escapeHtml(mid)}</div>
+                    `;
                     voltageList.innerHTML = '<li>Memuat data...</li>';
                     voltageModal.style.display = 'block';
                     try {
@@ -676,8 +682,7 @@
                             logs.forEach(log => {
                                 const li = document.createElement('li');
                                 const date = new Date(log.timestamp);
-                                const timeStr = date.toLocaleString('id-ID', { hour:'2-digit', minute:'2-digit', second:'2-digit', day:'2-digit', month:'2-digit', year:'numeric' });
-                                li.innerHTML = `<span>${escapeHtml(timeStr)}</span><span>${log.voltage.toFixed(1)} V</span>`;
+                                const timeStr = toWIBString(log.timestamp);
                                 voltageList.appendChild(li);
                             });
                         }
@@ -715,8 +720,21 @@
             }
 
             function formatDateTime(iso) {
+                return toWIBString(iso);
+            }
+            
+            function toWIBString(iso) {
                 if (!iso) return 'Belum update';
-                return new Date(iso).toLocaleTimeString('id-ID', { hour:'2-digit', minute:'2-digit', second:'2-digit' });
+                const d = new Date(iso);
+                // Geser +7 jam dari UTC
+                const wib = new Date(d.getTime() + 7 * 60 * 60 * 1000);
+                const dd = String(wib.getUTCDate()).padStart(2, '0');
+                const mm = String(wib.getUTCMonth() + 1).padStart(2, '0');
+                const yyyy = wib.getUTCFullYear();
+                const hh = String(wib.getUTCHours()).padStart(2, '0');
+                const min = String(wib.getUTCMinutes()).padStart(2, '0');
+                const ss = String(wib.getUTCSeconds()).padStart(2, '0');
+                return `${dd}/${mm}/${yyyy}, ${hh}.${min}.${ss}`;
             }
 
             function getMainStatus(m) {
@@ -1041,7 +1059,7 @@
                         <span class="stat-label">Kelembapan</span>
                         <span class="stat-value">${data.humidity != null ? data.humidity.toFixed(1) + '%' : 'N/A'}</span>
                     </div>
-                    <div class="last-update" data-field="lastUpdate">Update: ${formatDateTime(data.last_update)}</div>
+                    <div class="last-update" data-field="lastUpdate">Terakhir Update: ${formatDateTime(data.last_update)}</div>
                     <i class="fas fa-bolt voltage-icon" data-machine="${machineId}" title="Lihat tegangan"></i>
                 `;
             
@@ -1057,7 +1075,7 @@
             function updateMachineCardElement(element, newData) {
                 const mainStatus = getMainStatus(newData);
                 const statusBadge = element.querySelector('.status-badge');
-                let statusClass = 'stopped', statusText = 'IDLE';
+                let statusClass = 'stopped', statusText = 'HD OFF';
                 if (mainStatus === 'running') { statusClass = 'running'; statusText = 'HD ON'; }
                 else if (mainStatus === 'treatment') { statusClass = 'treatment'; statusText = 'TREATMENT'; }
                 //else if (mainStatus === 'maintenance') { statusClass = 'maintenance'; statusText = 'MAINTENANCE'; }
@@ -1078,7 +1096,7 @@
                 element.querySelector('[data-field="dialysis"]').textContent = formatTime(newData.current_dialysis_duration||0);
                 element.querySelector('[data-field="totalDialysis"]').textContent = formatTime(newData.total_dialysis_time||0);
                 element.querySelector('[data-field="completedDialysis"]').textContent = newData.completed_dialysis||0;
-                element.querySelector('[data-field="lastUpdate"]').textContent = `Update: ${formatDateTime(newData.last_update)}`;
+                element.querySelector('[data-field="lastUpdate"]').textContent = `Terakhir Update: ${formatDateTime(newData.last_update)}`;
                 const humidityEl = element.querySelector('[data-field="humidity"]');
                 if (humidityEl) {
                     humidityEl.textContent = newData.humidity != null ? newData.humidity.toFixed(1) + '%' : 'N/A';
@@ -1146,13 +1164,13 @@
                 } else {
                     // Mode normal (semua data), breadcrumb seperti semula
                     if (currentView === 'region') {
-                        html = `<span>🏠 Nasional</span>`;
+                        html = `<span>🌏 Nasional</span>`;
                     } else if (currentView === 'subregion') {
-                        html = `<span onclick="window.goToRegion()">🏠 Nasional</span> <i class="fas fa-chevron-right"></i> <span>${escapeHtml(selectedRegion)}</span>`;
+                        html = `<span onclick="window.goToRegion()">🌏 Nasional</span> <i class="fas fa-chevron-right"></i> <span>${escapeHtml(selectedRegion)}</span>`;
                     } else if (currentView === 'hospital') {
-                        html = `<span onclick="window.goToRegion()">🏠 Nasional</span> <i class="fas fa-chevron-right"></i> <span onclick="window.goToSubregion()">${escapeHtml(selectedRegion)}</span> <i class="fas fa-chevron-right"></i> <span>${escapeHtml(selectedSubregion)}</span>`;
+                        html = `<span onclick="window.goToRegion()">🌏 Nasional</span> <i class="fas fa-chevron-right"></i> <span onclick="window.goToSubregion()">${escapeHtml(selectedRegion)}</span> <i class="fas fa-chevron-right"></i> <span>${escapeHtml(selectedSubregion)}</span>`;
                     } else if (currentView === 'machine') {
-                        html = `<span onclick="window.goToRegion()">🏠 Nasional</span> <i class="fas fa-chevron-right"></i> <span onclick="window.goToSubregion()">${escapeHtml(selectedRegion)}</span> <i class="fas fa-chevron-right"></i> <span onclick="window.goToHospital()">${escapeHtml(selectedSubregion)}</span> <i class="fas fa-chevron-right"></i> <span>${escapeHtml(selectedHospital)}</span>`;
+                        html = `<span onclick="window.goToRegion()">🌏 Nasional</span> <i class="fas fa-chevron-right"></i> <span onclick="window.goToSubregion()">${escapeHtml(selectedRegion)}</span> <i class="fas fa-chevron-right"></i> <span onclick="window.goToHospital()">${escapeHtml(selectedSubregion)}</span> <i class="fas fa-chevron-right"></i> <span>${escapeHtml(selectedHospital)}</span>`;
                     }
                 }
                 breadcrumb.innerHTML = html;
