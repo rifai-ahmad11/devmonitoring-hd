@@ -681,8 +681,8 @@
                         } else {
                             logs.forEach(log => {
                                 const li = document.createElement('li');
-                                const date = new Date(log.timestamp);
                                 const timeStr = toWIBString(log.timestamp);
+                                li.innerHTML = `<span>${escapeHtml(timeStr)}</span><span>${log.voltage.toFixed(1)} V</span>`;
                                 voltageList.appendChild(li);
                             });
                         }
