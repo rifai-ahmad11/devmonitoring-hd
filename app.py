@@ -401,7 +401,16 @@ def admin_required(f):
             return redirect(url_for('index'))
         return f(*args, **kwargs)
     return decorated
-    
+
+def admin_or_viewer_required(f):
+    @wraps(f)
+    def decorated(*args, **kwargs):
+        if not session.get('logged_in'):
+            return redirect(url_for('login'))
+        if session.get('role') not in ['admin', 'viewer']:
+            return redirect(url_for('index'))   # atau forbidden 403
+        return f(*args, **kwargs)
+    return decorated
 
 
 # --- Route Halaman (tidak berubah) ---
@@ -435,7 +444,7 @@ def logout():
 
 
 @app.route('/admin')
-@admin_required
+@admin_or_viewer_required
 def admin_panel():
     return render_template('admin.html')
 
@@ -680,6 +689,8 @@ def update_pump_status():
 @app.route('/maintenance-done', methods=['POST'])
 @login_required
 def mark_maintenance_done():
+    if session.get('role') == 'viewer':
+          return jsonify({'error': 'Akses ditolak'}), 403
     try:
         data = request.get_json()
         machine_id = data.get('machine_id')
@@ -778,7 +789,7 @@ def check_machine_timeout():
 
 # --- Metadata Management (Admin) ---
 @app.route('/api/metadata', methods=['GET'])
-@admin_required
+@admin_or_viewer_required
 def get_all_metadata():
     """Mengembalikan semua metadata mesin."""
     try:
@@ -803,7 +814,7 @@ def get_all_metadata():
         return jsonify({'error': 'Internal server error'}), 500
 
 @app.route('/api/metadata/<machine_id>', methods=['GET'])
-@admin_required
+@admin_or_viewer_required
 def get_metadata(machine_id):
     """Mendapatkan metadata satu mesin."""
     try:
@@ -941,12 +952,12 @@ def delete_metadata(machine_id):
         return jsonify({'error': 'Internal server error'}), 500
 
 @app.route('/admin/users')
-@admin_required
+@admin_or_viewer_required
 def admin_users():
     return render_template('admin_users.html')
 
 @app.route('/admin/api/users', methods=['GET'])
-@admin_required
+@admin_or_viewer_required
 def api_get_users():
     try:
         users = db_session.query(User).all()
@@ -965,7 +976,7 @@ def api_get_users():
         return jsonify({'error': str(e)}), 500
 
 @app.route('/admin/api/users/<int:user_id>', methods=['GET'])
-@admin_required
+@admin_or_viewer_required
 def api_get_user(user_id):
     try:
         user = db_session.get(User, user_id)
@@ -1070,12 +1081,12 @@ def api_delete_user(user_id):
 # ========== Maintenance Config API (Admin Only) ==========
 
 @app.route('/admin/maintenance')
-@admin_required
+@admin_or_viewer_required
 def admin_maintenance():
     return render_template('admin_maintenance.html')
 
 @app.route('/api/maintenance-config', methods=['GET'])
-@admin_required
+@admin_or_viewer_required
 def get_maintenance_configs():
     try:
         configs = db_session.query(MaintenanceConfig).order_by(MaintenanceConfig.id).all()
