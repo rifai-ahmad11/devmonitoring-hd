@@ -490,7 +490,7 @@
             <span>Kategori</span>
         </div>
         {% endif %}
-        {% if session.get('role') == 'admin' %}
+        {% if session.get('role') in ['admin', 'viewer'] %}
         <div class="nav-item" id="navAdminMetadata" onclick="window.location.href='/admin'">
             <i class="fas fa-database"></i>
             <span>Admin Metadata</span>
