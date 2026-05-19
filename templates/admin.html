@@ -267,6 +267,13 @@
                     .replace(/'/g, '&#039;');
             }
 
+            const userRole = "{{ session.get('role', '') }}";
+
+            if (userRole === 'viewer') {
+                    document.getElementById('adminSaveBtn').style.display = 'none';
+                    document.getElementById('clearFormBtn').style.display = 'none';
+                }
+
             async function loadMetadataList() {
                 const tbody = document.getElementById('metadataTableBody');
                 tbody.innerHTML = '<tr><td colspan="8" class="loading-message">Memuat data...</td></tr>';
@@ -366,6 +373,11 @@
             function attachTableEvents() {
                 document.querySelectorAll('.edit-btn').forEach(btn => {
                     btn.addEventListener('click', async () => {
+                        if (userRole === 'viewer') {
+                            document.querySelectorAll('.edit-btn, .delete-btn').forEach(btn => {
+                                btn.style.display = 'none';
+                            });
+                        }
                         const id = btn.dataset.id;
                         try {
                             const res = await fetch(`/api/metadata/${id}`);
