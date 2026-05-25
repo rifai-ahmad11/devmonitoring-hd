@@ -1004,7 +1004,7 @@ def api_create_user():
         if not username or not password or not role:
             return jsonify({'error': 'Username, password, dan role harus diisi'}), 400
 
-        if role not in ['admin', 'teknisi']:
+        if role not in ['admin', 'teknisi', 'viewer']:
             return jsonify({'error': 'Role tidak valid'}), 400
 
         # Cek username sudah ada
@@ -1050,7 +1050,7 @@ def api_update_user(user_id):
         if password:
             user.password_hash = generate_password_hash(password)
 
-        if role and role in ['admin', 'teknisi']:
+        if role and role in ['admin', 'teknisi', 'viewer']:
             user.role = role
             if role == 'teknisi':
                 user.assigned_regions = assigned_regions
