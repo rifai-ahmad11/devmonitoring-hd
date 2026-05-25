@@ -218,6 +218,7 @@
                     <option value="">Pilih Role *</option>
                     <option value="teknisi">Teknisi</option>
                     <option value="admin">Admin</option>
+                    <option value="viewer">Viewer</option>
                 </select>
                 <input type="text" id="regions" placeholder="Kabupaten/Kota Penugasan. Misal: Bekasi, Jakarta Barat (pisahkan dengan koma) *">
             </div>
@@ -263,6 +264,14 @@
                     .replace(/>/g, '&gt;')
                     .replace(/"/g, '&quot;')
                     .replace(/'/g, '&#039;');
+            }
+
+
+            const userRole = "{{ session.get('role', '') }}";
+
+            if (userRole === 'viewer') {
+                document.getElementById('saveBtn').style.display = 'none';
+                document.getElementById('cancelBtn').style.display = 'none';
             }
 
             // Load user list
@@ -312,6 +321,12 @@
             }
 
             function attachTableEvents() {
+                
+                if (userRole === 'viewer') {
+                    document.querySelectorAll('.edit-btn, .delete-btn').forEach(btn => {
+                        btn.style.display = 'none';
+                    });
+                }
                 // Edit buttons
                 document.querySelectorAll('.edit-btn').forEach(btn => {
                     btn.addEventListener('click', async () => {
