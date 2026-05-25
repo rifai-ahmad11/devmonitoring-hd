@@ -154,6 +154,13 @@
                 return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
             }
 
+            const userRole = "{{ session.get('role', '') }}";
+            if (userRole === 'viewer') {
+                document.getElementById('saveBtn').style.display = 'none';
+                document.getElementById('cancelBtn').style.display = 'none';
+            }
+            
+
             // Tampilkan/sembunyikan time_unit berdasarkan threshold_type
             document.getElementById('thresholdType').addEventListener('change', function() {
                 const timeGroup = document.getElementById('timeUnitGroup');
@@ -204,6 +211,13 @@
             }
 
             function attachEvents() {
+
+                if (userRole === 'viewer') {
+                    document.querySelectorAll('.edit-btn, .delete-btn').forEach(btn => {
+                        btn.style.display = 'none';
+                    });
+                }
+                
                 document.querySelectorAll('.edit-btn').forEach(btn => {
                     btn.addEventListener('click', async () => {
                         const id = btn.dataset.id;
