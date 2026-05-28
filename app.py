@@ -122,13 +122,15 @@ class HumidityLog(Base):
     humidity = Column(Float)
     timestamp = Column(DateTime, default=datetime.utcnow)
 
-class VoltageLog(Base):
-    __tablename__ = 'voltage_logs'
+
+class VoltageEvent(Base):
+    __tablename__ = 'voltage_events'
     id = Column(Integer, primary_key=True)
     machine_id = Column(String(50), ForeignKey('machines.machine_id'))
+    event_type = Column(String(20), nullable=False)
     voltage = Column(Float)
     timestamp = Column(DateTime, default=datetime.utcnow)
-  
+
 # Buat tabel jika belum ada
 Base.metadata.create_all(bind=engine)
 
@@ -556,11 +558,12 @@ def log_voltage():
         data = request.get_json()
         machine_id_raw = data.get('machine_id')
         voltage = data.get('voltage')
-        if not machine_id_raw or voltage is None:
-            return jsonify({'error': 'Missing machine_id or voltage'}), 400
+        event = data.get('event')                # spike, overvoltage, undervoltage, error
+        if not machine_id_raw or voltage is None or not event:
+            return jsonify({'error': 'Missing machine_id, voltage, or event'}), 400
 
         machine_id = normalize_machine_id(machine_id_raw)
-        log = VoltageLog(machine_id=machine_id, voltage=voltage)
+        log = VoltageEvent(machine_id=machine_id, voltage=voltage, event_type=event)
         db_session.add(log)
         db_session.commit()
         return jsonify({'success': True})
@@ -569,6 +572,38 @@ def log_voltage():
         print(f"Error logging voltage: {e}")
         return jsonify({'error': str(e)}), 500
 
+@app.route('/api/voltage-summary/<machine_id>', methods=['GET'])
+@login_required
+def get_voltage_summary(machine_id):
+    try:
+        # Ambil semua event untuk mesin ini
+        events = db_session.query(VoltageEvent).filter_by(machine_id=machine_id)\
+                  .order_by(VoltageEvent.timestamp.asc()).all()
+
+        summary = {}
+        for ev in events:
+            if ev.event_type not in summary:
+                summary[ev.event_type] = {
+                    'event_type': ev.event_type,
+                    'count': 0,
+                    'last_occurred': None,
+                    'last_voltage': None
+                }
+            summary[ev.event_type]['count'] += 1
+            summary[ev.event_type]['last_occurred'] = ev.timestamp
+            summary[ev.event_type]['last_voltage'] = ev.voltage
+
+        # Ubah ke list agar bisa di-sort
+        result = []
+        for et in ['spike', 'overvoltage', 'undervoltage', 'error']:
+            if et in summary:
+                s = summary[et]
+                s['last_occurred'] = s['last_occurred'].isoformat() + 'Z' if s['last_occurred'] else None
+                result.append(s)
+
+        return jsonify(result)
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
 
 @app.route('/api/voltage-log/<machine_id>', methods=['GET'])
 @login_required
