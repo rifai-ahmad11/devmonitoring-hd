@@ -288,6 +288,12 @@
             padding: 8px 0;
             border-bottom: 1px solid #eee;
         }
+
+        #voltageSummaryTable td, #voltageSummaryTable th {
+            padding: 8px;
+            border-bottom: 1px solid #eee;
+        }
+        
         .machine-header {
             display: flex;
             justify-content: space-between;
@@ -572,16 +578,26 @@
         </div>
     </div>
 
-   <!-- Voltage Modal (letakkan di sini) -->
+    <!-- Voltage Modal -->
     <div id="voltageModal" class="modal">
         <div class="modal-content">
             <div class="modal-header">
-                <h2 class="modal-title">⚡ Tegangan AC</h2>
+                <h2 class="modal-title">⚡ Ringkasan Event Tegangan</h2>
                 <button class="close-button" id="closeVoltageModal">&times;</button>
             </div>
             <div class="modal-body">
-                <div class="machine-id-modal" id="voltageModalMachineId"></div>
-                <ul class="voltage-list" id="voltageList"></ul>
+                <span class="machine-id-modal" id="voltageModalMachineId"></span>
+                <table style="width:100%; margin-top:15px;">
+                    <thead>
+                        <tr>
+                            <th>Tipe Event</th>
+                            <th>Jumlah</th>
+                            <th>Terakhir Terjadi</th>
+                            <th>Tegangan (V)</th>
+                        </tr>
+                    </thead>
+                    <tbody id="voltageSummaryTable"></tbody>
+                </table>
             </div>
         </div>
     </div>
@@ -648,46 +664,48 @@
             // Voltage modal elements
             const voltageModal = document.getElementById('voltageModal');
             const voltageModalMachineId = document.getElementById('voltageModalMachineId');
-            const voltageList = document.getElementById('voltageList');
+            const voltageSummaryTable = document.getElementById('voltageSummaryTable');
             const closeVoltageModalBtn = document.getElementById('closeVoltageModal');
             
             closeVoltageModalBtn.addEventListener('click', () => voltageModal.style.display = 'none');
             window.addEventListener('click', (e) => { if (e.target === voltageModal) voltageModal.style.display = 'none'; });
             
-            // Delegasi klik pada ikon voltage (karena ikon dimasukkan secara dinamis)
+            // Delegasi klik ikon voltage
             document.addEventListener('click', async (e) => {
                 if (e.target.classList.contains('voltage-icon')) {
                     const machineId = e.target.dataset.machine;
                     if (!machineId) return;
-                    // Ambil data machine untuk SN
                     const machine = machinesData[machineId];
                     const sn = machine ? (machine.serial_number || machineId) : machineId;
-                    const mid = machineId; // machine_id asli
-                    
-                    // Tampilkan di modal
+                    const mid = machineId;
                     document.getElementById('voltageModalMachineId').innerHTML = `
                         <div>Serial Number: ${escapeHtml(sn)}</div>
                         <div style="font-size:0.9em; color:#555;">Machine ID: ${escapeHtml(mid)}</div>
                     `;
-                    voltageList.innerHTML = '<li>Memuat data...</li>';
+                    voltageSummaryTable.innerHTML = '<tr><td colspan="4">Memuat data...</td></tr>';
                     voltageModal.style.display = 'block';
                     try {
-                        const res = await fetch(`/api/voltage-log/${machineId}`);
+                        const res = await fetch(`/api/voltage-summary/${machineId}`);
                         if (!res.ok) throw new Error('Gagal fetch');
-                        const logs = await res.json();
-                        voltageList.innerHTML = '';
-                        if (logs.length === 0) {
-                            voltageList.innerHTML = '<li>Tidak ada data tegangan.</li>';
+                        const summary = await res.json();
+                        voltageSummaryTable.innerHTML = '';
+                        if (summary.length === 0) {
+                            voltageSummaryTable.innerHTML = '<tr><td colspan="4">Belum ada event.</td></tr>';
                         } else {
-                            logs.forEach(log => {
-                                const li = document.createElement('li');
-                                const timeStr = toWIBString(log.timestamp);
-                                li.innerHTML = `<span>${escapeHtml(timeStr)}</span><span>${log.voltage.toFixed(1)} V</span>`;
-                                voltageList.appendChild(li);
+                            summary.forEach(item => {
+                                const row = document.createElement('tr');
+                                const timeStr = toWIBString(item.last_occurred);
+                                row.innerHTML = `
+                                    <td>${escapeHtml(item.event_type)}</td>
+                                    <td>${item.count}</td>
+                                    <td>${escapeHtml(timeStr)}</td>
+                                    <td>${item.last_voltage ? item.last_voltage.toFixed(1) : '-'}</td>
+                                `;
+                                voltageSummaryTable.appendChild(row);
                             });
                         }
                     } catch (err) {
-                        voltageList.innerHTML = '<li>Gagal memuat data.</li>';
+                        voltageSummaryTable.innerHTML = '<tr><td colspan="4">Gagal memuat data.</td></tr>';
                     }
                 }
             });
