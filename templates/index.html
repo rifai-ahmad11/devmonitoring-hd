@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>HD Machine Monitoring Dashboard</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
     <style>
         /* ===== GLOBAL STYLES (sama seperti sebelumnya, ditambah beberapa penyesuaian) ===== */
         * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -292,6 +293,16 @@
         #voltageSummaryTable td, #voltageSummaryTable th {
             padding: 8px;
             border-bottom: 1px solid #eee;
+        }
+        
+        .humidity-icon {
+            position: absolute;
+            bottom: 10px;
+            left: 40px;   /* di samping kanan voltage-icon */
+            font-size: 1.4em;
+            color: #3498db;
+            cursor: pointer;
+            z-index: 5;
         }
         
         .machine-header {
@@ -602,6 +613,22 @@
         </div>
     </div>
 
+    <!-- Humidity Modal -->
+    <div id="humidityModal" class="modal">
+        <div class="modal-content" style="max-width: 700px;">
+            <div class="modal-header">
+                <h2 class="modal-title">💧 Tren Kelembapan</h2>
+                <button class="close-button" id="closeHumidityModal">&times;</button>
+            </div>
+            <div class="modal-body">
+                <span class="machine-id-modal" id="humidityModalMachineId"></span>
+                <div style="width:100%; height:300px; margin-top:15px;">
+                    <canvas id="humidityChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <script>
         (function(){
             // ---------- REGION MAPPING (OPSI A) ----------
@@ -706,6 +733,84 @@
                         }
                     } catch (err) {
                         voltageSummaryTable.innerHTML = '<tr><td colspan="4">Gagal memuat data.</td></tr>';
+                    }
+                }
+            });
+
+            // Humidity Modal Element
+            const humidityModal = document.getElementById('humidityModal');
+            const humidityModalMachineId = document.getElementById('humidityModalMachineId');
+            const humidityChartCanvas = document.getElementById('humidityChart');
+            const closeHumidityModalBtn = document.getElementById('closeHumidityModal');
+            
+            closeHumidityModalBtn.addEventListener('click', () => humidityModal.style.display = 'none');
+            window.addEventListener('click', (e) => { if (e.target === humidityModal) humidityModal.style.display = 'none'; });
+            
+            let humidityChartInstance = null;
+            
+            // Delegasi klik ikon humidity
+            document.addEventListener('click', async (e) => {
+                if (e.target.classList.contains('humidity-icon')) {
+                    const machineId = e.target.dataset.machine;
+                    if (!machineId) return;
+                    const machine = machinesData[machineId];
+                    const sn = machine ? (machine.serial_number || machineId) : machineId;
+                    const mid = machineId;
+                    document.getElementById('humidityModalMachineId').innerHTML = `
+                        <div>Serial Number: ${escapeHtml(sn)}</div>
+                        <div style="font-size:0.9em; color:#555;">Machine ID: ${escapeHtml(mid)}</div>
+                    `;
+                    humidityModal.style.display = 'block';
+                    try {
+                        const res = await fetch(`/api/humidity-log/${machineId}`);
+                        if (!res.ok) throw new Error('Gagal fetch');
+                        const logs = await res.json();
+                        if (logs.length === 0) {
+                            alert('Belum ada data kelembapan.');
+                            return;
+                        }
+                        const labels = logs.map(l => {
+                            const d = new Date(l.timestamp);
+                            return d.toLocaleString('id-ID', { day:'2-digit', month:'2-digit', hour:'2-digit', minute:'2-digit' });
+                        });
+                        const data = logs.map(l => l.humidity);
+            
+                        // Hancurkan chart lama jika ada
+                        if (humidityChartInstance) {
+                            humidityChartInstance.destroy();
+                        }
+                        const ctx = humidityChartCanvas.getContext('2d');
+                        humidityChartInstance = new Chart(ctx, {
+                            type: 'line',
+                            data: {
+                                labels: labels,
+                                datasets: [{
+                                    label: 'Kelembapan (%)',
+                                    data: data,
+                                    borderColor: '#3498db',
+                                    backgroundColor: 'rgba(52,152,219,0.1)',
+                                    fill: true,
+                                    tension: 0.3,
+                                    pointRadius: 0
+                                }]
+                            },
+                            options: {
+                                responsive: true,
+                                maintainAspectRatio: false,
+                                scales: {
+                                    y: {
+                                        min: 0,
+                                        max: 100,
+                                        ticks: { callback: v => v + '%' }
+                                    }
+                                },
+                                plugins: {
+                                    tooltip: { mode: 'index', intersect: false }
+                                }
+                            }
+                        });
+                    } catch (err) {
+                        alert('Gagal memuat data kelembapan.');
                     }
                 }
             });
@@ -1077,6 +1182,7 @@
                     </div>
                     <div class="last-update" data-field="lastUpdate">Terakhir Update: ${formatDateTime(data.last_update)}</div>
                     <i class="fas fa-bolt voltage-icon" data-machine="${machineId}" title="Lihat tegangan"></i>
+                    <i class="fas fa-tint humidity-icon" data-machine="${machineId}" title="Lihat tren kelembapan"></i>
                 `;
             
                 const badge = div.querySelector('.maintenance-badge');
