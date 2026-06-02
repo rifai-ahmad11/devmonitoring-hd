@@ -622,6 +622,26 @@ def get_voltage_log(machine_id):
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
+@app.route('/api/humidity-log/<machine_id>', methods=['GET'])
+@login_required
+def get_humidity_log(machine_id):
+    """Mengembalikan maksimal 300 data humidity terbaru untuk mesin tertentu."""
+    try:
+        logs = db_session.query(HumidityLog).filter_by(machine_id=machine_id)\
+                .order_by(desc(HumidityLog.timestamp)).limit(300).all()
+        # Balik urutan agar di grafik dari kiri (lama) ke kanan (baru)
+        logs = reversed(logs)
+        result = []
+        for l in logs:
+            result.append({
+                'id': l.id,
+                'humidity': l.humidity,
+                'timestamp': l.timestamp.isoformat() + 'Z'
+            })
+        return jsonify(result)
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
 @app.route('/update', methods=['POST'])
 def update_machine_status():
     try:
