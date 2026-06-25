@@ -1,6 +1,6 @@
 import os
 from flask import Flask, render_template, request, jsonify, session, redirect, url_for
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, date
 from datetime import date as date_type
 from functools import wraps
 import threading
