@@ -930,6 +930,8 @@ def create_metadata():
 
         # Parsing installation_date
         inst_date_str = data.get('installation_date')
+        if not inst_date_str:
+            return jsonify({'error': 'installation_date is required'}), 400
         installation_date = date.fromisoformat(inst_date_str) if inst_date_str else None
       
         metadata = MachineMetadata(
@@ -957,6 +959,7 @@ def update_metadata(machine_id):
     """Update metadata mesin."""
     try:
         data = request.get_json()
+        
         metadata = db_session.get(MachineMetadata, machine_id)
         if not metadata:
             # Jika belum ada, buat baru
@@ -977,6 +980,12 @@ def update_metadata(machine_id):
         metadata.category = data.get('category', metadata.category)
 
         inst_date_str = data.get('installation_date')
+        # installation_date hanya diupdate jika dikirim
+        if 'installation_date' in data:
+            inst_date_str = data['installation_date']
+            if not inst_date_str:
+                return jsonify({'error': 'installation_date cannot be empty'}), 400
+            metadata.installation_date = date.fromisoformat(inst_date_str)
         if inst_date_str is not None:
             metadata.installation_date = date.fromisoformat(inst_date_str) if inst_date_str else None
 
