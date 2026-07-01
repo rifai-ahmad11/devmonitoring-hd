@@ -962,32 +962,32 @@ def update_metadata(machine_id):
         
         metadata = db_session.get(MachineMetadata, machine_id)
         if not metadata:
-            # Jika belum ada, buat baru
+            # Jika metadata belum ada, cek dulu apakah mesin ada
             machine = db_session.get(Machine, machine_id)
             if not machine:
+                # Mesin belum ada → buat mesin baru
                 machine = Machine(machine_id=machine_id)
                 db_session.add(machine)
                 db_session.flush()
+            # Buat metadata baru (jangan buat machine lagi)
             metadata = MachineMetadata(machine_id=machine_id)
             db_session.add(metadata)
 
+        # Perbarui field-field
         metadata.serial_number = data.get('serial_number', metadata.serial_number)
         metadata.hospital_name = data.get('hospital_name', metadata.hospital_name)
         metadata.unit_number = data.get('unit_number', metadata.unit_number)
         metadata.region = data.get('region', metadata.region)
         metadata.subregion = data.get('subregion', metadata.subregion)
-        metadata.updated_at = datetime.utcnow()
         metadata.category = data.get('category', metadata.category)
+        metadata.updated_at = datetime.utcnow()
 
-        inst_date_str = data.get('installation_date')
-        # installation_date hanya diupdate jika dikirim
+        # Tangani installation_date secara eksplisit
         if 'installation_date' in data:
             inst_date_str = data['installation_date']
             if not inst_date_str:
                 return jsonify({'error': 'installation_date cannot be empty'}), 400
             metadata.installation_date = date.fromisoformat(inst_date_str)
-        if inst_date_str is not None:
-            metadata.installation_date = date.fromisoformat(inst_date_str) if inst_date_str else None
 
         db_session.commit()
         return jsonify({'success': True, 'message': 'Metadata updated'})
