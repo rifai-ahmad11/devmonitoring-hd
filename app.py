@@ -911,15 +911,14 @@ def create_metadata():
     """Membuat metadata baru untuk machine_id."""
     try:
         data = request.get_json()
-        machine_id = data.get('machine_id')
-        category = data.get('category', 'KSO')
-        if not machine_id:
+        raw_machine_id = data.get('machine_id')
+        if not raw_machine_id:
             return jsonify({'error': 'machine_id required'}), 400
+        machine_id = normalize_machine_id(raw_machine_id)
 
-        # Cek apakah mesin ada di tabel machines
+        # Cek apakah mesin ada di tabel machines, jika tidak buat baru
         machine = db_session.get(Machine, machine_id)
         if not machine:
-            # Bisa dibuat otomatis mesin baru jika belum ada
             machine = Machine(machine_id=machine_id)
             db_session.add(machine)
             db_session.flush()
@@ -932,8 +931,8 @@ def create_metadata():
         inst_date_str = data.get('installation_date')
         if not inst_date_str:
             return jsonify({'error': 'installation_date is required'}), 400
-        installation_date = date.fromisoformat(inst_date_str) if inst_date_str else None
-      
+        installation_date = date.fromisoformat(inst_date_str)
+
         metadata = MachineMetadata(
             machine_id=machine_id,
             serial_number=data.get('serial_number'),
@@ -941,7 +940,7 @@ def create_metadata():
             unit_number=data.get('unit_number'),
             region=data.get('region'),
             subregion=data.get('subregion'),
-            category=category,
+            category=data.get('category', 'Non-KSO'),
             installation_date=installation_date,
         )
         db_session.add(metadata)
@@ -953,27 +952,29 @@ def create_metadata():
         traceback.print_exc()
         return jsonify({'error': 'Internal server error'}), 500
 
+
 @app.route('/api/metadata/<machine_id>', methods=['PUT'])
 @admin_required
 def update_metadata(machine_id):
     """Update metadata mesin."""
     try:
+        # Normalisasi machine_id dari URL
+        machine_id = normalize_machine_id(machine_id)
+
         data = request.get_json()
-        
+
+        # Mesin harus sudah ada (dari data ESP32)
+        machine = db_session.get(Machine, machine_id)
+        if not machine:
+            return jsonify({'error': 'Mesin belum terdaftar'}), 404
+
         metadata = db_session.get(MachineMetadata, machine_id)
         if not metadata:
-            # Jika metadata belum ada, cek dulu apakah mesin ada
-            machine = db_session.get(Machine, machine_id)
-            if not machine:
-                # Mesin belum ada → buat mesin baru
-                machine = Machine(machine_id=machine_id)
-                db_session.add(machine)
-                db_session.flush()
-            # Buat metadata baru (jangan buat machine lagi)
+            # Metadata belum ada, buat baru (tapi tidak buat Machine lagi)
             metadata = MachineMetadata(machine_id=machine_id)
             db_session.add(metadata)
 
-        # Perbarui field-field
+        # Perbarui field
         metadata.serial_number = data.get('serial_number', metadata.serial_number)
         metadata.hospital_name = data.get('hospital_name', metadata.hospital_name)
         metadata.unit_number = data.get('unit_number', metadata.unit_number)
@@ -982,7 +983,6 @@ def update_metadata(machine_id):
         metadata.category = data.get('category', metadata.category)
         metadata.updated_at = datetime.utcnow()
 
-        # Tangani installation_date secara eksplisit
         if 'installation_date' in data:
             inst_date_str = data['installation_date']
             if not inst_date_str:
