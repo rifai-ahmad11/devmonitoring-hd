@@ -256,7 +256,8 @@
     <script>
         (function() {
             let allMetadata = [];
-
+            let editingMachineId = null;   // null = mesin baru, selain null = edit
+    
             function escapeHtml(str) {
                 if (!str) return '';
                 return String(str)
@@ -266,14 +267,14 @@
                     .replace(/"/g, '&quot;')
                     .replace(/'/g, '&#039;');
             }
-
+    
             const userRole = "{{ session.get('role', '') }}";
-
+    
             if (userRole === 'viewer') {
-                    document.getElementById('adminSaveBtn').style.display = 'none';
-                    document.getElementById('clearFormBtn').style.display = 'none';
-                }
-
+                document.getElementById('adminSaveBtn').style.display = 'none';
+                document.getElementById('clearFormBtn').style.display = 'none';
+            }
+    
             async function loadMetadataList() {
                 const tbody = document.getElementById('metadataTableBody');
                 tbody.innerHTML = '<tr><td colspan="8" class="loading-message">Memuat data...</td></tr>';
@@ -289,7 +290,7 @@
                     tbody.innerHTML = '<tr><td colspan="8" class="empty-message">Gagal memuat data. Periksa koneksi.</td></tr>';
                 }
             }
-
+    
             function populateRegionFilter() {
                 const regions = [...new Set(allMetadata.map(item => item.region).filter(r => r))];
                 const select = document.getElementById('filterRegion');
@@ -299,7 +300,7 @@
                 });
                 document.getElementById('filterSubregion').innerHTML = '<option value="">Semua Subregion</option>';
             }
-
+    
             function populateSubregionFilter(selectedRegion) {
                 const subregions = [...new Set(
                     allMetadata
@@ -313,26 +314,27 @@
                     select.innerHTML += `<option value="${escapeHtml(r)}">${escapeHtml(r)}</option>`;
                 });
             }
-
+    
             function renderFilteredTable() {
                 const tbody = document.getElementById('metadataTableBody');
                 const regionFilter = document.getElementById('filterRegion').value;
                 const subregionFilter = document.getElementById('filterSubregion').value;
-
+    
                 const filtered = allMetadata.filter(item => {
                     if (regionFilter && item.region !== regionFilter) return false;
                     if (subregionFilter && item.subregion !== subregionFilter) return false;
                     return true;
                 });
-
+    
                 if (filtered.length === 0) {
                     tbody.innerHTML = '<tr><td colspan="8" class="empty-message">Tidak ada metadata yang sesuai filter.</td></tr>';
                     return;
                 }
-
+    
                 tbody.innerHTML = '';
                 filtered.forEach(item => {
                     const row = document.createElement('tr');
+                    // Tombol edit/hapus tidak ditampilkan untuk viewer (per elemen, sudah diatur di attachTableEvents)
                     row.innerHTML = `
                         <td><code>${escapeHtml(item.machine_id)}</code></td>
                         <td>${escapeHtml(item.serial_number || '-')}</td>
@@ -352,10 +354,16 @@
                     `;
                     tbody.appendChild(row);
                 });
-
+    
                 attachTableEvents();
+                // Sembunyikan tombol aksi jika viewer (setelah render)
+                if (userRole === 'viewer') {
+                    document.querySelectorAll('.edit-btn, .delete-btn').forEach(btn => {
+                        btn.style.display = 'none';
+                    });
+                }
             }
-
+    
             document.getElementById('filterRegion').addEventListener('change', function() {
                 const region = this.value;
                 if (region) {
@@ -365,25 +373,27 @@
                 }
                 renderFilteredTable();
             });
-
+    
             document.getElementById('filterSubregion').addEventListener('change', function() {
                 renderFilteredTable();
             });
-
+    
             function attachTableEvents() {
                 document.querySelectorAll('.edit-btn').forEach(btn => {
                     btn.addEventListener('click', async () => {
-                        if (userRole === 'viewer') {
-                            document.querySelectorAll('.edit-btn, .delete-btn').forEach(btn => {
-                                btn.style.display = 'none';
-                            });
-                        }
                         const id = btn.dataset.id;
                         try {
                             const res = await fetch(`/api/metadata/${id}`);
                             if (!res.ok) throw new Error('Gagal ambil detail');
                             const data = await res.json();
-                            
+    
+                            // Tentukan apakah ini mesin baru (fallback) atau sudah ada metadata
+                            if (data.is_fallback) {
+                                editingMachineId = null;   // mesin baru, akan POST
+                            } else {
+                                editingMachineId = data.machine_id; // mesin sudah ada metadata, PUT
+                            }
+    
                             document.getElementById('adminMachineId').value = data.machine_id;
                             document.getElementById('adminSerialNumber').value = data.serial_number || '';
                             document.getElementById('adminHospitalName').value = data.hospital_name || '';
@@ -392,14 +402,14 @@
                             document.getElementById('adminSubregion').value = data.subregion || '';
                             document.getElementById('adminCategory').value = data.category || 'Non-KSO';
                             document.getElementById('adminInstallationDate').value = data.installation_date || '';
-                            
+    
                             document.querySelector('.card').scrollIntoView({ behavior: 'smooth' });
                         } catch (err) {
                             alert('Gagal mengambil data mesin.');
                         }
                     });
                 });
-
+    
                 document.querySelectorAll('.delete-btn').forEach(btn => {
                     btn.addEventListener('click', async () => {
                         if (!confirm('Yakin ingin menghapus metadata ini? Data mesin tetap ada.')) return;
@@ -419,11 +429,11 @@
                     });
                 });
             }
-
+    
             document.getElementById('adminSaveBtn').addEventListener('click', async () => {
                 const machineId = document.getElementById('adminMachineId').value.trim();
                 const hospitalName = document.getElementById('adminHospitalName').value.trim();
-                
+    
                 if (!machineId) {
                     alert('Machine ID harus diisi!');
                     return;
@@ -432,7 +442,7 @@
                     alert('Nama Rumah Sakit harus diisi!');
                     return;
                 }
-
+    
                 const payload = {
                     machine_id: machineId,
                     serial_number: document.getElementById('adminSerialNumber').value.trim() || null,
@@ -443,20 +453,21 @@
                     category: document.getElementById('adminCategory').value || 'Non-KSO',
                     installation_date: document.getElementById('adminInstallationDate').value || null
                 };
-
+    
+                // Gunakan state editingMachineId untuk menentukan method
+                const method = editingMachineId ? 'PUT' : 'POST';
+                const url = method === 'PUT' ? `/api/metadata/${editingMachineId}` : '/api/metadata';
+    
                 try {
-                    const checkRes = await fetch(`/api/metadata/${machineId}`);
-                    const method = checkRes.ok ? 'PUT' : 'POST';
-                    const url = method === 'PUT' ? `/api/metadata/${machineId}` : '/api/metadata';
-
                     const res = await fetch(url, {
                         method: method,
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify(payload)
                     });
-
+    
                     if (res.ok) {
                         alert('Metadata berhasil disimpan!');
+                        editingMachineId = null; // reset
                         loadMetadataList();
                         clearForm();
                     } else {
@@ -467,15 +478,17 @@
                     alert('Gagal terhubung ke server.');
                 }
             });
-
+    
             function clearForm() {
                 const ids = ['adminMachineId', 'adminSerialNumber', 'adminHospitalName', 'adminUnitNumber', 'adminRegion', 'adminSubregion'];
                 ids.forEach(id => document.getElementById(id).value = '');
                 document.getElementById('adminCategory').value = 'Non-KSO';
+                document.getElementById('adminInstallationDate').value = '';
+                editingMachineId = null;
             }
-
+    
             document.getElementById('clearFormBtn').addEventListener('click', clearForm);
-
+    
             loadMetadataList();
         })();
     </script>
